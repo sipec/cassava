@@ -16,3 +16,14 @@
 - Use `bun` as package manager
 - Run `bun run dev` for development
 - Run `bun run build` for production build
+
+### Typed CSV Format
+See also `src/lib/parser/README.md`
+- Superset of CSV with enhanced multi-line headers
+- Uses "0-" prefix for metadata rows
+- Supports rich type system including:
+  - Basic types (string, number, logical)
+  - Dates with format specs
+  - Computed fields
+  - Select/multiselect
+  - Nullable fields
