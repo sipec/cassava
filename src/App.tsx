@@ -130,7 +130,7 @@ function App() {
           />
           <label
             htmlFor="file-upload"
-            className="inline-block px-6 py-3 text-lg bg-yellow-800 hover:bg-yellow-400 rounded-lg border-2 border-yellow-500/50 cursor-pointer transition-colors duration-150 hover:border-yellow-500/75 active:bg-yellow-500/40 cursor-pointer"
+            className="inline-block px-6 py-3 text-lg bg-yellow-800 hover:bg-yellow-600 rounded-lg border-2 border-yellow-500/50 cursor-pointer transition-colors duration- hover:border-yellow-500/75 active:bg-yellow-500/40 cursor-pointer"
           >
             Upload a CSV or drag one here
           </label>
