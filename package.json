@@ -1,41 +1,41 @@
 {
-  "name": "cassava",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "web:dev": "vite",
-    "dev": "tauri dev",
-    "web:build": "tsc && vite build",
-    "build": "tauri build",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "tauri": "tauri",
-    "build-icons": "tauri icon ./public/root.svg"
-  },
-  "dependencies": {
-    "@tailwindcss/vite": "^4.0.14",
-    "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-opener": "^2",
-    "papaparse": "^5.5.2",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "tailwindcss": "^4.0.14"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.21.0",
-    "@tauri-apps/cli": "^2",
-    "@types/papaparse": "^5.3.15",
-    "@types/react": "^19.0.10",
-    "@types/react-dom": "^19.0.4",
-    "@vitejs/plugin-react-swc": "^3.8.0",
-    "eslint": "^9.21.0",
-    "eslint-plugin-react-hooks": "^5.1.0",
-    "eslint-plugin-react-refresh": "^0.4.19",
-    "globals": "^15.15.0",
-    "typescript": "~5.7.2",
-    "typescript-eslint": "^8.24.1",
-    "vite": "^6.2.0",
-    "vite-plugin-pwa": "^0.21.1"
-  }
+ "name": "cassava",
+ "private": true,
+ "version": "0.0.0",
+ "type": "module",
+ "scripts": {
+  "web:dev": "vite",
+  "dev": "tauri dev",
+  "web:build": "tsc && vite build",
+  "build": "tauri build",
+  "web:preview": "vite preview",
+  "build-icons": "tauri icon ./public/root.svg",
+  "format": "biome format . && bun run format:rust",
+  "format:rust": "cargo fmt --manifest-path ./src-tauri/Cargo.toml",
+  "lint": "biome check . --fix && bun run format:rust",
+  "lint:fast": "biome check --changed --fix",
+  "ai:validate": "biome check --changed --fix && tsc --noEmit",
+  "ai:validate:rust": "cargo clippy --manifest-path ./src-tauri/Cargo.toml -- -D warnings",
+  "ci": "biome ci . && bun run format:rust && bun run ai:validate:rust"
+ },
+ "dependencies": {
+  "@tailwindcss/vite": "^4.0.14",
+  "@tauri-apps/api": "^2",
+  "@tauri-apps/plugin-opener": "^2",
+  "papaparse": "^5.5.2",
+  "react": "^19.0.0",
+  "react-dom": "^19.0.0",
+  "tailwindcss": "^4.0.14"
+ },
+ "devDependencies": {
+  "@biomejs/biome": "1.9.4",
+  "@tauri-apps/cli": "^2",
+  "@types/papaparse": "^5.3.15",
+  "@types/react": "^19.0.10",
+  "@types/react-dom": "^19.0.4",
+  "@vitejs/plugin-react-swc": "^3.8.0",
+  "globals": "^15.15.0",
+  "typescript": "~5.7.2",
+  "vite": "^6.2.0"
+ }
 }

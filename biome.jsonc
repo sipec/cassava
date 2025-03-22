@@ -1,0 +1,63 @@
+{
+ "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+ "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+ "files": { "ignoreUnknown": false, "ignore": [] },
+ "formatter": {
+  "formatWithErrors": false,
+  "indentStyle": "space",
+  "indentWidth": 1
+ },
+ "organizeImports": { "enabled": true },
+ "linter": {
+  "enabled": true,
+  "rules": {
+   "recommended": true,
+   "correctness": {
+    "noUndeclaredDependencies": "error",
+    "noUndeclaredVariables": "error",
+    "useExhaustiveDependencies": "off",
+    "useHookAtTopLevel": "error"
+   },
+   "style": { "noNamespace": "error" },
+   "suspicious": {
+    "noEmptyBlockStatements": "warn",
+    "noExplicitAny": "warn"
+   },
+   "nursery": {
+    "noEnum": "warn",
+    "noSecrets": "error",
+    "noTemplateCurlyInString": "warn",
+    "useConsistentCurlyBraces": { "level": "warn", "fix": "safe" },
+    "useGuardForIn": "error",
+    "useSortedClasses": {
+     "level": "warn",
+     "fix": "safe",
+     "options": {
+      "functions": ["clsx", "twMerge"]
+     }
+    }
+   }
+  },
+  "ignore": ["dist"]
+ },
+ "javascript": {
+  "formatter": {
+   "semicolons": "asNeeded",
+   "quoteStyle": "single"
+  }
+ },
+ "overrides": [
+  {
+   "include": ["**/*.ts", "**/*.tsx"],
+   "linter": {
+    "rules": {
+     "correctness": {
+      // can remove these in biome 2.0, see https://github.com/biomejs/biome/issues/5401
+      "noUndeclaredDependencies": "off",
+      "noUndeclaredVariables": "off"
+     }
+    }
+   }
+  }
+ ]
+}
