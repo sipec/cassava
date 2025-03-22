@@ -134,7 +134,6 @@ function App() {
           >
             Upload a CSV or drag one here
           </label>
-          <p className="mt-2 text-stone-400">Your data stays in your browser</p>
         </div>
       )}
     </div>
