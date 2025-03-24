@@ -1,8 +1,7 @@
 import Papa from 'papaparse'
 import { useCallback, useEffect, useState } from 'react'
-import { version } from '../package.json'
-import { openFile, readFile, saveFile } from './lib/files'
-import { tryCatch } from './lib/utils'
+import { Empty } from './components/Empty'
+import { readFile, saveFile } from './lib/files'
 
 export default function App() {
  const [isDragging, setIsDragging] = useState(false)
@@ -40,13 +39,10 @@ export default function App() {
   })
  }, [])
 
- const handleDrop = useCallback(
-  (_e: React.DragEvent) => {
-   setIsDragging(false)
-   // TODO: Handle files
-  },
-  [handleFile],
- )
+ const handleDrop = useCallback((_e: React.DragEvent) => {
+  setIsDragging(false)
+  // TODO: Handle files
+ }, [])
 
  const handleCellEdit = useCallback(
   (row: number, col: number, value: string) => {
@@ -125,26 +121,7 @@ export default function App() {
      </div>
     </>
    ) : (
-    <>
-     <div className="grid h-full w-full grid-rows-3 flex-col place-items-center justify-center gap-2 self-center text-center">
-      <h1 className="text-2xl">
-       cassava <span className="text-lg text-stone-500">v{version}</span>
-      </h1>
-
-      <button
-       type="button"
-       onClick={async () => {
-        const { data, error } = await tryCatch(openFile())
-        if (error) console.error(error)
-        if (data) handleFile(data)
-       }}
-       className="w-full cursor-pointer rounded-lg border-2 border-yellow-800 bg-yellow-50 px-6 py-3 text-xl text-yellow-900 transition-colors hover:border-yellow-700 hover:bg-yellow-100 active:bg-yellow-100"
-      >
-       open a csv
-      </button>
-      <span className="text-stone-400">or drag and drop anywhere</span>
-     </div>
-    </>
+    <Empty onSelectFile={handleFile} />
    )}
   </div>
  )
