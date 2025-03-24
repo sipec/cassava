@@ -5,8 +5,8 @@
 - [x] File drag & drop upload
 - [x] Basic CSV parsing and display
 - [x] Table-based editor interface
-- [ ] Save/export functionality
-  - [ ] Autosave
+- [x] Save/export functionality
+  - [x] Autosave
 - [ ] Support for Cassava-flavored CSV
   - [ ] Parse enhanced headers (0-type, 0-default)
   - [ ] Basic type validation
