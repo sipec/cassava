@@ -1,36 +1,41 @@
 # Project TODOs
 
 ## MVP Features
-- [ ] File drag & drop upload
-- [ ] Basic CSV parsing and display
-- [ ] Table-based editor interface
+
+- [x] File drag & drop upload
+- [x] Basic CSV parsing and display
+- [x] Table-based editor interface
 - [ ] Save/export functionality
   - [ ] Autosave
-- [ ] Basic data validation
 - [ ] Support for Cassava-flavored CSV
   - [ ] Parse enhanced headers (0-type, 0-default)
   - [ ] Basic type validation
 
 ## Next Phase
-- [ ] Advanced type features
-  - [ ] Computed fields
+
+- [ ] Type features
+  - [ ] Checkboxes (booleans)
+  - [ ] Computed fields (formulas)
   - [ ] Date formatting
-  - [ ] Select/multiselect fields
+  - [ ] Dropdowns select & multi-select (enums)
 - [ ] Column operations
   - [ ] Reorder
   - [ ] Filter
   - [ ] Sort
 - [ ] Search functionality
 - [ ] Keyboard shortcuts
+  - [ ] Customizable
 - [ ] Undo/redo
 - [ ] Multiple file tabs
 
 ## Future Enhancements
+
 - [ ] Data visualization
 - [ ] Import/export to other formats
 - [ ] Themes
-- [ ] Custom keyboard shortcuts
 
-## Technical Improvements
-- [ ] Add tests
-- [ ] Service worker caching strategy
+## Technical Improvements?
+
+- [ ] Unit & integration tests
+- [ ] Data validation
+- [ ] Service worker caching
