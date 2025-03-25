@@ -252,9 +252,7 @@ export default function App() {
  function getCellClassName(row: number, col: number) {
   const isSelected = selection && isCellInSelection(row, col, selection)
   return twMerge(
-   'min-w-[100px] whitespace-nowrap border border-stone-700 p-2',
-   'shadow-yellow-500 outline-0 outline-yellow-300/50 focus:bg-stone-600 focus:shadow-[inset_0_0_0_2px]',
-   'cursor-default tabular-nums',
+   'min-w-[40px] cursor-default whitespace-nowrap border border-stone-700 p-2 tabular-nums shadow-yellow-500 outline-0 outline-yellow-300/50 focus:bg-stone-600 focus:shadow-[inset_0_0_0_2px]',
    isSelected && 'bg-stone-600',
    mode === 'edit' && 'focus:outline-2',
   )
@@ -301,7 +299,7 @@ export default function App() {
     <>
      <NicePath className="mb-8">{currentPath}</NicePath>
      <div className="grow overflow-auto">
-      <table className="w-full border-collapse">
+      <table className="border-collapse">
        <tbody ref={tableRef}>
         {data.map((row, i) => (
          <tr key={row[0] || i} className="hover:bg-stone-700/10">

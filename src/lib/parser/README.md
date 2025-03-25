@@ -1,6 +1,6 @@
 # Cassava-flavored CSV
 
-This is a standard that is a superset of csv.  It is designed to be human-readable while also being more structured for computers. We accomplish this using an "enhanced header". Here's an example
+This is a standard that is a superset of csv. It is designed to be human-readable while also being more structured for computers. We accomplish this using an "enhanced header". Here's an example
 
 ```csv
 0-cassava,name,birthday,age,notifications,color
@@ -20,6 +20,7 @@ If the first cell contains "0-cassava", then all the rows starting with 0 should
 The first column corresponds to line numbers.
 
 ### Types
+
 - logical is like a boolean type
 - maybe is like a boolean type but nullable. (empty string)
 - select is like an enum type
