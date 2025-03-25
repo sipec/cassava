@@ -25,7 +25,7 @@
 - [ ] Search functionality
 - [x] Keyboard shortcuts
   - [ ] Customizable
-- [ ] Selections
+- [x] Selections
 - [ ] Copy paste
 - [ ] Undo/redo
 - [ ] Multiple file tabs
