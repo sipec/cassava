@@ -4,6 +4,25 @@ import { twMerge } from 'tailwind-merge'
 import { Empty } from './components/Empty'
 import { readFile, saveFile } from './lib/files'
 
+function HoverButton(props: {
+ className?: string
+ children: React.ReactNode
+ onClick: () => void
+}) {
+ return (
+  <button
+   type="button"
+   className={twMerge(
+    'flex h-full w-full grow cursor-pointer items-center justify-center self-center p-1 text-2xl text-stone-300 opacity-0 transition-all duration-150 hover:bg-stone-700 hover:opacity-100',
+    props.className,
+   )}
+   onClick={props.onClick}
+  >
+   {props.children}
+  </button>
+ )
+}
+
 export default function App() {
  const [isDragging, setIsDragging] = useState(false)
  const [data, setData] = useState<string[][]>([])
@@ -75,15 +94,7 @@ export default function App() {
 
    if (newRow < 0) return
 
-   if (data[newRow] == null || data[newRow][newCol] == null) {
-    setData((prevData) => {
-     const newData = structuredClone(prevData)
-     while (newData[newRow] == null) newData.push([])
-     const row = newData[newRow]
-     while (row[newCol] == null) row.push('')
-     return newData
-    })
-   }
+   createCellIfMissing(newRow, newCol)
 
    if (e.shiftKey) {
     setSelection((prev) => ({
@@ -215,6 +226,18 @@ export default function App() {
   }
  }
 
+ function createCellIfMissing(newRow: number, newCol: number) {
+  if (data[newRow] == null || data[newRow][newCol] == null) {
+   setData((prevData) => {
+    const newData = structuredClone(prevData)
+    while (newData[newRow] == null) newData.push([])
+    const row = newData[newRow]
+    while (row[newCol] == null) row.push('')
+    return newData
+   })
+  }
+ }
+
  const tableRef = useRef<HTMLTableSectionElement>(null)
 
  function focusCell(row: number, col: number) {
@@ -235,6 +258,22 @@ export default function App() {
    isSelected && 'bg-stone-600',
    mode === 'edit' && 'focus:outline-2',
   )
+ }
+
+ function selectColumn(col: number) {
+  setSelection({
+   start: { row: 0, col },
+   end: { row: data.length - 1, col },
+  })
+  setMode('visual')
+ }
+
+ function selectRow(row: number) {
+  setSelection({
+   start: { row, col: 0 },
+   end: { row, col: data[row].length - 1 },
+  })
+  setMode('visual')
  }
 
  useEffect(() => {
@@ -265,11 +304,14 @@ export default function App() {
       <table className="w-full border-collapse">
        <tbody ref={tableRef}>
         {data.map((row, i) => (
-         <tr key={row[0] || i} className="hover:bg-stone-800">
+         <tr key={row[0] || i} className="hover:bg-stone-700/10">
           {row.map((cell, j) => (
            <td
             key={header?.[j] || j}
-            className={getCellClassName(i, j)}
+            className={twMerge(
+             getCellClassName(i, j),
+             i === 0 && 'group/col relative',
+            )}
             contentEditable={true}
             suppressContentEditableWarning
             onBlur={(e) => {
@@ -310,8 +352,33 @@ export default function App() {
             {cell}
            </td>
           ))}
+          <HoverButton
+           onClick={() => {
+            const j = row.length
+            createCellIfMissing(i, j)
+            requestAnimationFrame(() => focusCell(i, j))
+           }}
+          >
+           +
+          </HoverButton>
          </tr>
         ))}
+        <tr>
+         {data[data.length - 1]?.map((_, j) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+          <td key={j}>
+           <HoverButton
+            onClick={() => {
+             const i = data.length
+             createCellIfMissing(i, j)
+             requestAnimationFrame(() => focusCell(i, j))
+            }}
+           >
+            +
+           </HoverButton>
+          </td>
+         ))}
+        </tr>
        </tbody>
       </table>
      </div>
