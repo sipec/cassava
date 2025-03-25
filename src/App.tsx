@@ -4,25 +4,6 @@ import { twMerge } from 'tailwind-merge'
 import { Empty } from './components/Empty'
 import { readFile, saveFile } from './lib/files'
 
-function HoverButton(props: {
- className?: string
- children: React.ReactNode
- onClick: () => void
-}) {
- return (
-  <button
-   type="button"
-   className={twMerge(
-    'flex h-full w-full grow cursor-pointer items-center justify-center self-center p-1 text-2xl text-stone-300 opacity-0 transition-all duration-150 hover:bg-stone-700 hover:opacity-100',
-    props.className,
-   )}
-   onClick={props.onClick}
-  >
-   {props.children}
-  </button>
- )
-}
-
 export default function App() {
  const [isDragging, setIsDragging] = useState(false)
  const [data, setData] = useState<string[][]>([])
@@ -77,14 +58,11 @@ export default function App() {
   })
  }
 
- function handleCellKeyDown(e: React.KeyboardEvent<HTMLTableCellElement>) {
-  const td = e.currentTarget
-  const tr = td.parentElement
-  if (!tr) return
-
-  const row = Array.from(tr.parentElement?.children || []).indexOf(tr)
-  const col = Array.from(tr.children).indexOf(td)
-
+ function handleCellKeyDown(
+  row: number,
+  col: number,
+  e: React.KeyboardEvent<HTMLTableCellElement>,
+ ) {
   const navigate = (newRow: number, newCol: number) => {
    e.preventDefault()
 
@@ -243,19 +221,10 @@ export default function App() {
  function focusCell(row: number, col: number) {
   const table = tableRef.current
   const td = table?.querySelector(
-   `tr:nth-child(${row + 1}) td:nth-child(${col + 1})`,
+   `tr:nth-of-type(${row + 1}) td:nth-of-type(${col + 1})`,
   ) as HTMLTableCellElement | null
   if (!td) return
   td.focus()
- }
-
- function getCellClassName(row: number, col: number) {
-  const isSelected = selection && isCellInSelection(row, col, selection)
-  return twMerge(
-   'min-w-[40px] cursor-default whitespace-nowrap border border-stone-700 p-2 tabular-nums shadow-yellow-500 outline-0 outline-yellow-300/50 focus:bg-stone-600 focus:shadow-[inset_0_0_0_2px]',
-   isSelected && 'bg-stone-600',
-   mode === 'edit' && 'focus:outline-2',
-  )
  }
 
  function selectColumn(col: number) {
@@ -287,7 +256,7 @@ export default function App() {
   <div
    data-dropzone
    className={twMerge(
-    'flex min-h-screen flex-col justify-center bg-stone-800 p-8 text-white',
+    'flex h-screen w-screen flex-col justify-center bg-stone-800 text-white',
     isDragging && 'border-4 border-yellow-500/50 border-dashed',
    )}
    onDragEnter={handleDrag}
@@ -297,19 +266,64 @@ export default function App() {
   >
    {currentPath != null ? (
     <>
-     <NicePath className="mb-8">{currentPath}</NicePath>
-     <div className="grow overflow-auto">
-      <table className="border-collapse">
-       <tbody ref={tableRef}>
+     <NicePath className="m-8 mb-1">{currentPath}</NicePath>
+     <div className="relative min-h-0 grow overflow-auto">
+      <table
+       className="mx-8 grid border-collapse"
+       style={{
+        gridTemplateColumns: `0 repeat(${(data?.[0]?.length || 0) + 2}, max-content)`,
+       }}
+       // biome-ignore lint/a11y/useSemanticElements: i am tho
+       role="grid"
+      >
+       <thead className="contents">
+        <tr className="contents">
+         <th scope="col">
+          <span className="sr-only">#</span>
+         </th>
+         {data?.[0]?.map((_, j) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: behavior is index-based
+          <th key={j} scope="col" className="sticky top-0 bg-stone-800">
+           <HoverButton
+            className="group-hover/row:opacity-100"
+            onClick={() => selectColumn(j)}
+           >
+            {letter(j)}
+           </HoverButton>
+          </th>
+         ))}
+        </tr>
+       </thead>
+       <tbody ref={tableRef} className="contents">
         {data.map((row, i) => (
-         <tr key={row[0] || i} className="hover:bg-stone-700/10">
+         <tr key={row[0] || i} className="group/row contents">
+          <th
+           scope="row"
+           className="sticky left-8 border-0 bg-stone-800"
+           style={{ gridRowStart: i + 2, gridColumnStart: 1 }}
+          >
+           <div className="-translate-x-full min-w-8 bg-stone-800">
+            <HoverButton
+             className="group-hover/row:opacity-100"
+             onClick={() => selectRow(i)}
+            >
+             {i + 1}
+            </HoverButton>
+           </div>
+          </th>
+
           {row.map((cell, j) => (
            <td
             key={header?.[j] || j}
             className={twMerge(
-             getCellClassName(i, j),
-             i === 0 && 'group/col relative',
+             'min-h-[41px] min-w-[41px]', // the font is juust high enough that most cells will be 41px ..
+             'cursor-default whitespace-nowrap border border-stone-700 p-2 tabular-nums shadow-yellow-500 outline-0 outline-yellow-300/50 focus:bg-stone-600 focus:shadow-[inset_0_0_0_2px]',
+             selection && isCellInSelection(i, j, selection)
+              ? 'bg-stone-600'
+              : 'group-hover/row:bg-stone-700/10',
+             mode === 'edit' && 'focus:outline-2',
             )}
+            style={{ gridRowStart: i + 2, gridColumnStart: j + 2 }}
             contentEditable={true}
             suppressContentEditableWarning
             onBlur={(e) => {
@@ -319,7 +333,7 @@ export default function App() {
               setSelection(null)
              }
             }}
-            onKeyDown={handleCellKeyDown}
+            onKeyDown={(e) => handleCellKeyDown(i, j, e)}
             onFocus={(e) => {
              // select all text on focus
              const selection = window.getSelection()
@@ -351,6 +365,8 @@ export default function App() {
            </td>
           ))}
           <HoverButton
+           className="group-hover/row:opacity-100"
+           style={{ gridRowStart: i + 2, gridColumnStart: row.length + 2 }}
            onClick={() => {
             const j = row.length
             createCellIfMissing(i, j)
@@ -361,10 +377,13 @@ export default function App() {
           </HoverButton>
          </tr>
         ))}
-        <tr>
+        <tr className="contents">
          {data[data.length - 1]?.map((_, j) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-          <td key={j}>
+          <td
+           // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+           key={j}
+           style={{ gridRowStart: data.length + 2, gridColumnStart: j + 2 }}
+          >
            <HoverButton
             onClick={() => {
              const i = data.length
@@ -394,6 +413,27 @@ export default function App() {
  )
 }
 
+function HoverButton(props: {
+ className?: string
+ style?: React.CSSProperties
+ children: React.ReactNode
+ onClick: () => void
+}) {
+ return (
+  <button
+   type="button"
+   className={twMerge(
+    'flex h-full w-full grow cursor-pointer items-center justify-center self-center p-2 text-stone-500 opacity-20 transition-colors duration-150 hover:bg-stone-700 hover:text-stone-300 hover:opacity-100',
+    props.className,
+   )}
+   style={props.style}
+   onClick={props.onClick}
+  >
+   {props.children}
+  </button>
+ )
+}
+
 const NicePath = (props: { className?: string; children: string }) => {
  const parts = props.children.split('/')
  const name = parts.pop()
@@ -407,6 +447,16 @@ const NicePath = (props: { className?: string; children: string }) => {
    <span className="text-stone-100">{name}</span>
   </div>
  )
+}
+
+const letter = (col: number) => {
+ let num = col
+ let letters = ''
+ while (num >= 0) {
+  letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[num % 26] + letters
+  num = Math.floor(num / 26) - 1
+ }
+ return letters
 }
 
 type Selection = {

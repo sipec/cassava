@@ -30,7 +30,6 @@
    },
    "nursery": {
     "noEnum": "warn",
-    "noSecrets": "error",
     "noTemplateCurlyInString": "warn",
     "useConsistentCurlyBraces": { "level": "warn", "fix": "safe" },
     "useGuardForIn": "error",

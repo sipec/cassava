@@ -6,7 +6,7 @@ export const Empty = (props: {
  onSelectFile: (path: string) => unknown
 }) => {
  return (
-  <div className="grid h-full w-full grid-rows-3 flex-col place-items-center justify-center gap-2 self-center text-center">
+  <div className="grid w-full grid-rows-3 flex-col place-items-center justify-center gap-2 self-center text-center">
    <h1 className="text-2xl">
     cassava <span className="text-lg text-stone-500">v{version}</span>
    </h1>
