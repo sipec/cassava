@@ -8,6 +8,7 @@ This is a csv editor that wants to be a spreasheet when it grows up.
 - No server dependencies
 - Privacy-first
 - Open file types, like Obsidian
+- Keep it simple - avoid premature optimizations like useCallback/useMemo
 
 ## Tech Stack
 

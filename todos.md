@@ -18,13 +18,15 @@
   - [ ] Computed fields (formulas)
   - [ ] Date formatting
   - [ ] Dropdowns select & multi-select (enums)
-- [ ] Column operations
+- [ ] Column/Row operations
   - [ ] Reorder
   - [ ] Filter
   - [ ] Sort
 - [ ] Search functionality
-- [ ] Keyboard shortcuts
+- [x] Keyboard shortcuts
   - [ ] Customizable
+- [ ] Selections
+- [ ] Copy paste
 - [ ] Undo/redo
 - [ ] Multiple file tabs
 

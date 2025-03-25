@@ -1,19 +1,19 @@
 import Papa from 'papaparse'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Empty } from './components/Empty'
 import { readFile, saveFile } from './lib/files'
 
 export default function App() {
  const [isDragging, setIsDragging] = useState(false)
  const [data, setData] = useState<string[][]>([])
- const dataWithAffordances = data
-  .map((row) => [...row, ''])
-  .concat([Array((data[0]?.length || 0) + 1).fill('')])
-
+ const [currentCell, setCurrentCell] = useState<{
+  row: number
+  col: number
+ } | null>(null)
  const [currentPath, setCurrentPath] = useState<string | null>(null)
  const header = data.at(0)
 
- const handleDrag = useCallback((e: React.DragEvent) => {
+ function handleDrag(e: React.DragEvent) {
   e.preventDefault()
   e.stopPropagation()
 
@@ -22,9 +22,9 @@ export default function App() {
   } else if (e.type === 'dragleave' || e.type === 'drop') {
    setIsDragging(false)
   }
- }, [])
+ }
 
- const handleFile = useCallback(async (path: string) => {
+ async function handleFile(path: string) {
   setCurrentPath(path)
   const csv = await readFile(path)
 
@@ -37,29 +37,148 @@ export default function App() {
     // TODO: Add proper error handling UI
    },
   })
- }, [])
+ }
 
- const handleDrop = useCallback((_e: React.DragEvent) => {
+ function handleDrop(_e: React.DragEvent) {
   setIsDragging(false)
   // TODO: Handle files
- }, [])
+ }
 
- const handleCellEdit = useCallback(
-  (row: number, col: number, value: string) => {
-   if (row < 0 || col < 0 || Number.isNaN(row) || Number.isNaN(col)) {
-    console.error('Invalid row or column:', row, col)
-    return
+ function handleCellEdit(row: number, col: number, value: string) {
+  if (row < 0 || col < 0 || Number.isNaN(row) || Number.isNaN(col)) {
+   console.error('Invalid row or column:', row, col)
+   return
+  }
+
+  setData((prevData) => {
+   const newData = structuredClone(prevData)
+   if (value && !newData[row]) newData[row] = []
+   if (value || newData[row]?.[col] != null) newData[row][col] = value
+   return newData
+  })
+ }
+
+ function handleCellKeyDown(e: React.KeyboardEvent<HTMLTableCellElement>) {
+  const td = e.currentTarget
+  const tr = td.parentElement
+  if (!tr) return
+
+  const row = Array.from(tr.parentElement?.children || []).indexOf(tr)
+  const col = Array.from(tr.children).indexOf(td)
+
+  const navigate = (newRow: number, newCol: number) => {
+   e.preventDefault()
+
+   if (newCol < 0) {
+    // navigate to end of previous row
+    return navigate(newRow - 1, data[newRow - 1]?.length - 1)
    }
 
-   setData((prevData) => {
-    const newData = structuredClone(prevData)
-    if (value && !newData[row]) newData[row] = []
-    if (value || newData[row]?.[col] != null) newData[row][col] = value
-    return newData
+   if (newRow < 0) return
+
+   // Expand grid if needed
+   if (data[newRow] == null || data[newRow][newCol] == null) {
+    setData((prevData) => {
+     const newData = structuredClone(prevData)
+
+     // Add new rows if needed
+     while (newData[newRow] == null) {
+      newData.push([])
+     }
+
+     // Add new columns if needed
+     const row = newData[newRow]
+     while (row[newCol] == null) {
+      row.push('')
+     }
+
+     return newData
+    })
+    console.log('expanded')
+   }
+
+   // ensure DOM is updated before focusing
+   requestAnimationFrame(() => {
+    focusCell(newRow, newCol)
    })
-  },
-  [],
- )
+  }
+
+  switch (e.key) {
+   case 'Home':
+    if (e.metaKey) navigate(0, col)
+    else navigate(0, 0)
+    break
+   case 'End':
+    if (e.metaKey) navigate(data.length - 1, col)
+    else navigate(data.length - 1, data[data.length - 1].length - 1)
+    break
+   case 'ArrowUp':
+    if (e.metaKey) navigate(0, col)
+    else navigate(row - 1, col)
+    break
+   case 'ArrowDown':
+    if (e.metaKey) navigate(data.length - 1, col)
+    else navigate(row + 1, col)
+    break
+   case 'ArrowLeft':
+    if (e.metaKey) navigate(row, 0)
+    else navigate(row, col - 1)
+    break
+   case 'ArrowRight':
+   case 'Tab':
+    if (e.metaKey) navigate(row, data[row].length - 1)
+    else navigate(row, col + 1)
+    break
+   case 'Enter':
+    if (!e.shiftKey) {
+     navigate(row + 1, col)
+    }
+    break
+   case 'Backspace':
+   case 'Clear':
+    if (e.metaKey) {
+     // delete row
+     setData((prevData) => {
+      const newData = structuredClone(prevData)
+      newData.splice(row, 1)
+      return newData
+     })
+     navigate(row - 1, data[row - 1]?.length - 1)
+    } else if (e.altKey) {
+     // delete cell if it's at the end of the row. otherwise set empty
+     setData((prevData) => {
+      const newData = structuredClone(prevData)
+      const newRow = newData[row]
+      if (newRow) {
+       if (col >= newRow.length - 1) {
+        newRow.splice(col, 1)
+       } else {
+        newRow[col] = ''
+       }
+      }
+      // check if we deleted the last item in this row
+      if (newRow && newRow.length === 0) {
+       newData.splice(row, 1)
+      }
+
+      return newData
+     })
+     navigate(row, col - 1)
+    }
+    break
+  }
+ }
+
+ const tableRef = useRef<HTMLTableSectionElement>(null)
+
+ function focusCell(row: number, col: number) {
+  const table = tableRef.current
+  const td = table?.querySelector(
+   `tr:nth-child(${row + 1}) td:nth-child(${col + 1})`,
+  ) as HTMLTableCellElement | null
+  if (!td) return
+  td.focus()
+ }
 
  useEffect(() => {
   if (currentPath && data) {
@@ -69,17 +188,7 @@ export default function App() {
    }, 1000)
    return () => clearTimeout(timeoutId)
   }
- }, [data, currentPath, saveFile])
-
- const handleCellKeyDown = useCallback(
-  (e: React.KeyboardEvent<HTMLTableCellElement>) => {
-   if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault()
-    ;(e.target as HTMLElement).blur()
-   }
-  },
-  [],
- )
+ }, [data, currentPath])
 
  return (
   <div
@@ -97,8 +206,8 @@ export default function App() {
      <NicePath className="mb-8">{currentPath}</NicePath>
      <div className="grow overflow-auto">
       <table className="w-full border-collapse">
-       <tbody>
-        {dataWithAffordances.map((row, i) => (
+       <tbody ref={tableRef}>
+        {data.map((row, i) => (
          <tr key={row[0] || i} className="hover:bg-stone-800">
           {row.map((cell, j) => (
            <td
@@ -110,6 +219,14 @@ export default function App() {
              handleCellEdit(i, j, e.currentTarget.textContent || '')
             }
             onKeyDown={handleCellKeyDown}
+            onFocus={(e) => {
+             const selection = window.getSelection()
+             const range = document.createRange()
+             range.selectNodeContents(e.currentTarget)
+             range.collapse(false)
+             selection?.removeAllRanges()
+             selection?.addRange(range)
+            }}
            >
             {cell}
            </td>
