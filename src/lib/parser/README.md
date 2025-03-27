@@ -6,7 +6,6 @@ This is a standard that is a superset of csv. It is designed to be human-readabl
 0-cassava,name,birthday,age,notifications,color
 0-type,string,date:YYYY-MM-DD,func:number,logical,select
 0-default,,,"YEARS(NOW()-{birthday})",false,red|green|blue
-0-avassac,name,birthday,age,notifications,color
 1,Adam,1999-02-14,26,false,red
 2,Beu,1977-01-13,48,true,blue
 ```

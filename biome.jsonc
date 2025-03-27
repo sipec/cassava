@@ -17,6 +17,9 @@
   "enabled": true,
   "rules": {
    "recommended": true,
+   "a11y": {
+    "all": false
+   },
    "correctness": {
     "noUndeclaredDependencies": "error",
     "noUndeclaredVariables": "error",
@@ -26,7 +29,8 @@
    "style": { "noNamespace": "error" },
    "suspicious": {
     "noEmptyBlockStatements": "warn",
-    "noExplicitAny": "warn"
+    "noExplicitAny": "off",
+    "noArrayIndexKey": "warn"
    },
    "nursery": {
     "noEnum": "warn",

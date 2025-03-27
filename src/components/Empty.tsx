@@ -1,4 +1,4 @@
-import { version } from 'react'
+import { version } from '../../package.json'
 import { openFile } from '../lib/files'
 import { tryCatch } from '../lib/utils'
 

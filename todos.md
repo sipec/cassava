@@ -1,5 +1,8 @@
 # Project TODOs
 
+- if not enough headers, it does not add them and instead makes stuff up
+- regression: keyboard shortcuts and selection don't work. re-think focus / edit mode is managed
+
 ## MVP Features
 
 - [x] File drag & drop upload
@@ -7,25 +10,25 @@
 - [x] Table-based editor interface
 - [x] Save/export functionality
   - [x] Autosave
-- [ ] Support for Cassava-flavored CSV
-  - [ ] Parse enhanced headers (0-type, 0-default)
+- [x] Support for Cassava-flavored CSV
+  - [x] Parse enhanced headers (0-type, 0-default)
   - [ ] Basic type validation
 
 ## Next Phase
 
-- [ ] Type features
-  - [ ] Checkboxes (booleans)
-  - [ ] Computed fields (formulas)
-  - [ ] Date formatting
-  - [ ] Dropdowns select & multi-select (enums)
+- [x] Type features
+  - [x] Checkboxes (booleans)
+  - [x] Date formatting
+  - [x] Dropdowns select & multi-select (enums)
+- [ ] Computed fields (formulas)
 - [ ] Column/Row operations
   - [ ] Reorder
   - [ ] Filter
   - [ ] Sort
 - [ ] Search functionality
-- [x] Keyboard shortcuts
+- [-] Keyboard shortcuts
   - [ ] Customizable
-- [x] Selections
+- [-] Selections
 - [ ] Copy paste
 - [ ] Undo/redo
 - [ ] Multiple file tabs
@@ -41,3 +44,4 @@
 - [ ] Unit & integration tests
 - [ ] Data validation
 - [ ] Service worker caching
+- [ ] Make robust against malformed input

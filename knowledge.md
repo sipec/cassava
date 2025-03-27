@@ -23,11 +23,34 @@ This is a csv editor that wants to be a spreasheet when it grows up.
 - Run `bun run ai:validate` after each change, and fix errors
   - also run `bun run ai:validate:rust` if you change anything in src-tauri
 
+### Project Structure
+
+- `src/`
+  - `components/` - React components
+    - `inputs/` - Specialized input components for different data types
+    - `ErrorBoundary.tsx` - Top-level error handling
+  - `lib/`
+    - `parser/` - CSV parsing and type handling
+    - `files.ts` - File operations
+  - `App.tsx` - Main application component
+- `src-tauri/` - Rust backend code
+
 ### Implementation Notes
 
 - Keep parsing logic separate in lib/parser
-- Focus on reliability over performance initially
+- Focus on simplicity over performance initially
 - Add error boundaries around key components
+
+Component Style:
+
+```typescript
+export const CellInput = (props: {
+ value: string
+ setValue: (value: string) => void
+ nullDefault?: string
+ type: ColumnType
+}) => {
+```
 
 ### Typed CSV Format
 

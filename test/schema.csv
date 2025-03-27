@@ -1,0 +1,8 @@
+0-cassava,name,birthday,age,notifications,color,height
+0-type,string,date:YYYY-MM-DD,func:number,logical,select:red|green|blue,number
+0-null-default,,,,false,red,4
+0-default,,,YEARS(NOW()-{birthday}),,,
+1,Adam,1999-12-14,YEARS(NOW()-{birthday}),true,red,4
+2,Beu,1977-01-13,sdf,true,blue,3
+3,,,4,true,red,6
+4,,,,,blue,4

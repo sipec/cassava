@@ -1,17 +1,77 @@
 import Papa from 'papaparse'
 import { useEffect, useRef, useState } from 'react'
 import { twMerge } from 'tailwind-merge'
+import { CellInput } from './components/CellInput'
 import { Empty } from './components/Empty'
 import { readFile, saveFile } from './lib/files'
+import { THE_ORDER, parseCassava } from './lib/parser/cassava'
+import type { ColumnType } from './lib/parser/types'
 
 export default function App() {
+ const [isCassava, setIsCassava] = useState(false)
  const [isDragging, setIsDragging] = useState(false)
- const [data, setData] = useState<string[][]>([])
+ const [headers, setHeaders] = useState<string[][] | null>(null)
+ const [rawData, setRawData] = useState<string[][]>([[]])
+ const data = !isCassava ? rawData : rawData.map((row) => row.slice(1))
+ const setData = (
+  data: string[][] | ((prevData: string[][]) => string[][]),
+ ) => {
+  setRawData((raw) => {
+   const inputData = !isCassava ? raw : raw.map((row) => row.slice(1))
+
+   const output = typeof data === 'function' ? data(inputData) : data
+
+   if (!isCassava) return output
+   return output.map((row, i) => [(i + 1).toString(), ...row])
+  })
+ }
+
+ const types = headers?.[THE_ORDER.indexOf('type')].slice(1) as
+  | ColumnType[]
+  | undefined
+ const nullDefaults = headers?.[THE_ORDER.indexOf('null-default')].slice(1)
+
  const [selection, setSelection] = useState<Selection | null>(null)
  type Mode = 'visual' | 'edit' | 'command'
  const [mode, setMode] = useState<Mode>('visual')
  const [currentPath, setCurrentPath] = useState<string | null>(null)
- const header = data.at(0)
+
+ async function handleFile(path: string) {
+  setCurrentPath(path)
+  const csv = await readFile(path)
+
+  Papa.parse<string[]>(csv, {
+   skipEmptyLines: true,
+   complete: (results) => {
+    const { headers, data, isCassava } = parseCassava(results.data)
+
+    setHeaders(headers)
+    setRawData(data)
+    setIsCassava(isCassava)
+   },
+   error: (error: unknown) => {
+    console.error('Error parsing CSV:', error)
+   },
+  })
+ }
+
+ useEffect(() => {
+  if (!currentPath) return
+
+  const timeoutId = setTimeout(() => {
+   let output: string[][]
+
+   if (isCassava) {
+    // Add back headers and line numbers
+    output = [...(headers ?? []), ...rawData]
+   } else {
+    output = rawData
+   }
+
+   if (output.length) saveFile(currentPath, Papa.unparse(output))
+  }, 1000)
+  return () => clearTimeout(timeoutId)
+ }, [rawData, currentPath, headers])
 
  function handleDrag(e: React.DragEvent) {
   e.preventDefault()
@@ -22,21 +82,6 @@ export default function App() {
   } else if (e.type === 'dragleave' || e.type === 'drop') {
    setIsDragging(false)
   }
- }
-
- async function handleFile(path: string) {
-  setCurrentPath(path)
-  const csv = await readFile(path)
-
-  Papa.parse<string[]>(csv, {
-   complete: (results) => {
-    setData(results.data)
-   },
-   error: (error: unknown) => {
-    console.error('Error parsing CSV:', error)
-    // TODO: Add proper error handling UI
-   },
-  })
  }
 
  function handleDrop(_e: React.DragEvent) {
@@ -123,7 +168,7 @@ export default function App() {
 
       e.preventDefault()
       const { row, col } = selection?.start || { row: 0, col: 0 }
-      pasteSelection({ row, col, data, paste })
+      setData((prevData) => pasteSelection({ row, col, data: prevData, paste }))
      })()
     }
     break
@@ -243,15 +288,6 @@ export default function App() {
   setMode('visual')
  }
 
- useEffect(() => {
-  if (currentPath && data) {
-   const timeoutId = setTimeout(() => {
-    saveFile(currentPath, Papa.unparse(data))
-   }, 1000)
-   return () => clearTimeout(timeoutId)
-  }
- }, [data, currentPath])
-
  return (
   <div
    data-dropzone
@@ -266,14 +302,24 @@ export default function App() {
   >
    {currentPath != null ? (
     <>
-     <NicePath className="m-8 mb-1">{currentPath}</NicePath>
+     <div className="m-8 mb-1 flex justify-between">
+      <NicePath>{currentPath}</NicePath>
+      {/* toggle button for cassava mode */}
+      <HoverButton
+       className="-mt-2 w-fit grow-0 opacity-75"
+       onClick={() => {
+        setIsCassava(!isCassava)
+       }}
+      >
+       {isCassava ? 'cassava' : 'csv'}
+      </HoverButton>
+     </div>
      <div className="relative min-h-0 grow overflow-auto">
       <table
        className="mx-8 grid border-collapse"
        style={{
-        gridTemplateColumns: `0 repeat(${(data?.[0]?.length || 0) + 2}, max-content)`,
+        gridTemplateColumns: `0 repeat(${((headers || data)[0]?.length || 0) + 2}, max-content) max-content`,
        }}
-       // biome-ignore lint/a11y/useSemanticElements: i am tho
        role="grid"
       >
        <thead className="contents">
@@ -281,17 +327,27 @@ export default function App() {
          <th scope="col">
           <span className="sr-only">#</span>
          </th>
-         {data?.[0]?.map((_, j) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: behavior is index-based
-          <th key={j} scope="col" className="sticky top-0 bg-stone-800">
-           <HoverButton
-            className="group-hover/row:opacity-100"
-            onClick={() => selectColumn(j)}
+         {(headers?.[0].slice(1) || Array(data[0]?.length || 0)).map(
+          (title, j) => (
+           <th
+            key={title || j}
+            scope="col"
+            className="sticky top-0 bg-stone-800"
            >
-            {letter(j)}
-           </HoverButton>
-          </th>
-         ))}
+            <div className="flex flex-col items-center">
+             <HoverButton
+              className={twMerge(
+               'group-hover/row:opacity-100',
+               title && 'opacity-75',
+              )}
+              onClick={() => selectColumn(j)}
+             >
+              {title || letter(j)}
+             </HoverButton>
+            </div>
+           </th>
+          ),
+         )}
         </tr>
        </thead>
        <tbody ref={tableRef} className="contents">
@@ -314,34 +370,23 @@ export default function App() {
 
           {row.map((cell, j) => (
            <td
-            key={header?.[j] || j}
+            key={headers?.[0][j] || j}
             className={twMerge(
              'min-h-[41px] min-w-[41px]', // the font is juust high enough that most cells will be 41px ..
-             'cursor-default whitespace-nowrap border border-stone-700 p-2 tabular-nums shadow-yellow-500 outline-0 outline-yellow-300/50 focus:bg-stone-600 focus:shadow-[inset_0_0_0_2px]',
+             'cursor-default whitespace-nowrap border border-stone-700 tabular-nums shadow-yellow-500 outline-0 outline-yellow-300/50 focus-within:bg-stone-600 focus-within:shadow-[inset_0_0_0_2px]',
              selection && isCellInSelection(i, j, selection)
               ? 'bg-stone-600'
               : 'group-hover/row:bg-stone-700/10',
              mode === 'edit' && 'focus:outline-2',
             )}
             style={{ gridRowStart: i + 2, gridColumnStart: j + 2 }}
-            contentEditable={true}
-            suppressContentEditableWarning
             onBlur={(e) => {
-             handleCellEdit(i, j, e.currentTarget.textContent || '')
-             if (e.relatedTarget?.tagName !== 'TD') {
+             if (e.relatedTarget?.parentElement?.tagName !== 'TD') {
               setMode('visual')
               setSelection(null)
              }
             }}
             onKeyDown={(e) => handleCellKeyDown(i, j, e)}
-            onFocus={(e) => {
-             // select all text on focus
-             const selection = window.getSelection()
-             const range = document.createRange()
-             range.selectNodeContents(e.currentTarget)
-             selection?.removeAllRanges()
-             selection?.addRange(range)
-            }}
             onClick={() => {
              // if already selected
              if (
@@ -361,7 +406,12 @@ export default function App() {
              focusCell(i, j)
             }}
            >
-            {cell}
+            <CellInput
+             value={cell}
+             setValue={(value) => handleCellEdit(i, j, value)}
+             nullDefault={nullDefaults?.[j]}
+             type={(isCassava && types?.[j]) || 'string'}
+            />
            </td>
           ))}
           <HoverButton
@@ -402,12 +452,6 @@ export default function App() {
     </>
    ) : (
     <Empty onSelectFile={handleFile} />
-   )}
-   {DEBUG && (
-    <div className="flex gap-2">
-     {mode}
-     <pre>{JSON.stringify(selection)}</pre>
-    </div>
    )}
   </div>
  )
@@ -500,9 +544,11 @@ const pasteSelection = (props: {
 }) => {
  const { row, col, data, paste } = props
  const copy = structuredClone(data)
- for (let i = row; i < paste.length; i++) {
-  copy[i].splice(col, paste[i].length, ...paste[i])
+ for (let i = 0; i < paste.length && row + i < copy.length; i++) {
+  if (!copy[row + i]) copy[row + i] = []
+  for (let j = 0; j < paste[i].length; j++) {
+   copy[row + i][col + j] = paste[i][j]
+  }
  }
+ return copy
 }
-
-const DEBUG = true

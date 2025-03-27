@@ -1,14 +1,23 @@
 # Cassava
 
-A privacy-first CSV editor that runs entirely in your browser. Like Obsidian but for CSV files.
+A slick, modern CSV editor with spreadsheet features. Like Obsidian but for CSV files.
 
 ## Features
-- 📝 Edit CSV files directly in your browser
-- 🔒 100% client-side processing - your data never leaves your device
-- 📱 Works offline (PWA)
-- 🎨 Modern, responsive interface
-- 📊 Visual data validation
-- 🔍 Search and filter capabilities
+
+- 📊 [Typed columns](/src/lib/parser/README.md): Text, Numbers, Dates, Checkboxes, Select & Multi-select
+- 🔄 Functions (coming soon)
+- 💾 Autosave
+- ⌨️ Keyboard navigation
+- ✂️ Copy/paste (coming soon)
+- 🔒 100% local - your data never leaves your device
+
+### Roadmap
+
+- 🎯 Column/row reordering
+- 🔄 Undo/redo support
+- 📑 Multiple file tabs
+- 📥 Import from other formats
+- 📤 Export to Excel/JSON
 
 ## Development
 
@@ -23,6 +32,4 @@ bun run dev
 bun run build
 ```
 
-## Privacy
-
-Cassava processes everything locally in your browser. No data is ever sent to any server. You can even use it offline after the first load.
+we use biome.js for linting and formatting. (`bun run lint` and `bun run format`)
