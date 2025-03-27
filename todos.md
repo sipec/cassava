@@ -1,7 +1,6 @@
 # Project TODOs
 
 - if not enough headers, it does not add them and instead makes stuff up
-- regression: keyboard shortcuts and selection don't work. re-think focus / edit mode is managed
 
 ## MVP Features
 
@@ -26,7 +25,7 @@
   - [ ] Filter
   - [ ] Sort
 - [ ] Search functionality
-- [-] Keyboard shortcuts
+- [x] Keyboard shortcuts
   - [ ] Customizable
 - [-] Selections
 - [ ] Copy paste

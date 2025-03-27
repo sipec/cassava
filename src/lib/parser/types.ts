@@ -7,25 +7,20 @@ export type ColumnType =
  | 'multiselect'
 
 export const parseColumnType = (type: string): ColumnType => {
- try {
-  if (!type) return 'string'
+ if (!type) return 'string'
 
-  const [baseType] = type.split(':')
-  switch (baseType) {
-   case 'number':
-   case 'date':
-   case 'logical':
-   case 'select':
-   case 'multiselect':
-    return baseType
-   default:
-    console.warn(`Unknown column type: ${type}, falling back to string`)
-    return 'string'
-  }
- } catch (error) {
-  console.error('Error parsing column type:', error)
-  console.error('Type string:', type)
-  return 'string'
+ const [baseType] = type.split(':')
+ switch (baseType) {
+  case 'string':
+  case 'number':
+  case 'date':
+  case 'logical':
+  case 'select':
+  case 'multiselect':
+   return baseType
+  default:
+   console.warn(`Unknown column type: ${type}, falling back to string`)
+   return 'string'
  }
 }
 

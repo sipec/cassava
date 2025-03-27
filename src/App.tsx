@@ -265,11 +265,11 @@ export default function App() {
 
  function focusCell(row: number, col: number) {
   const table = tableRef.current
-  const td = table?.querySelector(
-   `tr:nth-of-type(${row + 1}) td:nth-of-type(${col + 1})`,
-  ) as HTMLTableCellElement | null
-  if (!td) return
-  td.focus()
+  const elem = table?.querySelector(
+   `tr:nth-of-type(${row + 1}) td:nth-of-type(${col + 1}) input`,
+  ) as HTMLInputElement | null
+  if (!elem) return
+  elem.focus()
  }
 
  function selectColumn(col: number) {
@@ -352,7 +352,8 @@ export default function App() {
        </thead>
        <tbody ref={tableRef} className="contents">
         {data.map((row, i) => (
-         <tr key={row[0] || i} className="group/row contents">
+         // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+         <tr key={i} className="group/row contents">
           <th
            scope="row"
            className="sticky left-8 border-0 bg-stone-800"
