@@ -229,14 +229,6 @@ export default function App() {
     if (selection && !isSingular(selection)) {
      // delete selection
      setData((data) => deleteSelection({ selection, data }))
-    } else if (e.metaKey) {
-     // delete row
-     setData((prevData) => {
-      const newData = structuredClone(prevData)
-      newData.splice(row, 1)
-      return newData
-     })
-     navigate(row - 1, data[row - 1]?.length - 1)
     } else if (e.altKey) {
      // hard delete cell if it's at the end of the row.
      setData((prevData) => {
