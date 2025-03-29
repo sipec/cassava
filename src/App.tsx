@@ -58,6 +58,19 @@ export default function App() {
  useEffect(() => {
   if (!currentPath) return
 
+  const onFocus = () => {
+   handleFile(currentPath)
+  }
+
+  window.addEventListener('focus', onFocus)
+  return () => {
+   window.removeEventListener('focus', onFocus)
+  }
+ }, [currentPath])
+
+ useEffect(() => {
+  if (!currentPath) return
+
   const timeoutId = setTimeout(() => {
    let output: string[][]
 
