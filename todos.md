@@ -21,7 +21,7 @@
   - [x] Dropdowns select & multi-select (enums)
 - [ ] Computed fields (formulas)
 - [ ] Column/Row operations
-  - [ ] Reorder
+  - [x] Reorder
   - [ ] Filter
   - [ ] Sort
 - [ ] Search functionality

@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react'
 import Papa from 'papaparse'
 import { useEffect, useRef, useState } from 'react'
 import { twMerge } from 'tailwind-merge'
@@ -6,10 +7,15 @@ import { Empty } from './components/Empty'
 import { readFile, saveFile } from './lib/files'
 import { THE_ORDER, parseCassava } from './lib/parser/cassava'
 import type { ColumnType } from './lib/parser/types'
+import {
+ insertColumnBefore,
+ insertRowBefore,
+ moveColumn,
+ moveRow,
+} from './lib/table'
 
 export default function App() {
  const [isCassava, setIsCassava] = useState(false)
- const [isDragging, setIsDragging] = useState(false)
  const [headers, setHeaders] = useState<string[][] | null>(null)
  const [rawData, setRawData] = useState<string[][]>([[]])
  const data = !isCassava ? rawData : rawData.map((row) => row.slice(1))
@@ -18,9 +24,7 @@ export default function App() {
  ) => {
   setRawData((raw) => {
    const inputData = !isCassava ? raw : raw.map((row) => row.slice(1))
-
    const output = typeof data === 'function' ? data(inputData) : data
-
    if (!isCassava) return output
    return output.map((row, i) => [(i + 1).toString(), ...row])
   })
@@ -35,6 +39,12 @@ export default function App() {
  type Mode = 'visual' | 'edit' | 'command'
  const [mode, setMode] = useState<Mode>('visual')
  const [currentPath, setCurrentPath] = useState<string | null>(null)
+
+ const [dropTarget, setDropTarget] = useState<number | null>(null)
+ const [dragSource, setDragSource] = useState<{
+  type: 'col' | 'row'
+  index: number
+ } | null>(null)
 
  async function handleFile(path: string) {
   setCurrentPath(path)
@@ -85,22 +95,6 @@ export default function App() {
   }, 1000)
   return () => clearTimeout(timeoutId)
  }, [rawData, currentPath, headers])
-
- function handleDrag(e: React.DragEvent) {
-  e.preventDefault()
-  e.stopPropagation()
-
-  if (e.type === 'dragenter' || e.type === 'dragover') {
-   setIsDragging(true)
-  } else if (e.type === 'dragleave' || e.type === 'drop') {
-   setIsDragging(false)
-  }
- }
-
- function handleDrop(_e: React.DragEvent) {
-  setIsDragging(false)
-  // TODO: Handle files
- }
 
  function handleCellEdit(row: number, col: number, value: string) {
   if (row < 0 || col < 0 || Number.isNaN(row) || Number.isNaN(col)) {
@@ -298,12 +292,12 @@ export default function App() {
    data-dropzone
    className={twMerge(
     'flex h-screen w-screen flex-col justify-center bg-stone-800 text-white',
-    isDragging && 'border-4 border-yellow-500/50 border-dashed',
+    // isDraggingFile && 'border-4 border-yellow-500/50 border-dashed',
    )}
-   onDragEnter={handleDrag}
-   onDragOver={handleDrag}
-   onDragLeave={handleDrag}
-   onDrop={handleDrop}
+   onDragEnd={() => {
+    setDragSource(null)
+    setDropTarget(null)
+   }}
   >
    {currentPath != null ? (
     <>
@@ -321,12 +315,25 @@ export default function App() {
      </div>
      <div className="relative min-h-0 grow overflow-auto">
       <table
-       className="mx-8 grid border-collapse"
+       className="mx-8 grid w-fit border-collapse"
        style={{
-        gridTemplateColumns: `0 repeat(${((headers || data)[0]?.length || 0) + 2}, max-content) max-content`,
+        gridTemplateColumns: `0 repeat(${((headers || data)[0]?.length || 0) + 1}, max-content) max-content`,
+        gridTemplateRows: `repeat(${data.length + 1}, max-content) max-content`,
        }}
        role="grid"
       >
+       {Array.from({ length: (data[0]?.length || 0) + 1 }).map((_, j) => (
+        <ColGridLine
+         key={j}
+         position={j}
+         highlight={dragSource?.type === 'col' && dropTarget === j}
+         onClickAdd={() => {
+          setData((prev) => insertColumnBefore(prev, j))
+          setHeaders((prev) => insertColumnBefore(prev || [], j + 1))
+         }}
+        />
+       ))}
+
        <thead className="contents [writing-mode:vertical-rl]">
         <tr className="contents">
          <th scope="col">
@@ -337,16 +344,59 @@ export default function App() {
            <th
             key={title || j}
             scope="col"
-            className="sticky top-0 bg-stone-800"
+            className="group/col sticky top-0 z-10 bg-stone-800"
+            style={{ gridRowStart: 1, gridColumnStart: j + 2 }}
+            draggable="true"
+            onDragStart={(e) => {
+             e.dataTransfer.effectAllowed = 'move'
+             setDragSource({ type: 'col', index: j })
+
+             e.dataTransfer.setData(
+              'text/csv',
+              Papa.unparse([
+               ...(isCassava ? [] : (headers?.[j + 1] ?? [])),
+               ...data.map((row) => [row[j]]),
+              ]),
+             )
+            }}
+            onDragEnter={(e) => e.preventDefault()}
+            onDragOver={(e) => {
+             e.preventDefault()
+             e.dataTransfer.dropEffect = 'move'
+
+             if (dragSource?.type === 'col') {
+              const rect = e.currentTarget.getBoundingClientRect()
+              const midpoint = rect.left + rect.width / 2
+              const dropIndex = e.clientX < midpoint ? j : j + 1
+              setDropTarget(dropIndex)
+             }
+            }}
+            onDrop={(e) => {
+             e.preventDefault()
+
+             if (!dragSource || dragSource.type !== 'col') {
+              return
+             }
+
+             const src = dragSource.index
+             const target = dropTarget ?? j
+             const dest = target <= src ? target : target - 1
+             if (src === dest) return
+
+             setData((prev) => moveColumn(prev, src, dest))
+             setHeaders((prev) => prev && moveColumn(prev, src + 1, dest + 1))
+
+             setDragSource(null)
+            }}
            >
             <HoverButton
              className={twMerge(
-              'justify-end group-hover/row:opacity-100',
+              'items-start justify-end group-hover/row:opacity-100',
               title && 'opacity-75',
              )}
              onClick={() => selectColumn(j)}
             >
-             {title || letter(j)}
+             <span>{title || letter(j)}</span>
             </HoverButton>
            </th>
           ),
@@ -355,14 +405,57 @@ export default function App() {
        </thead>
        <tbody ref={tableRef} className="contents">
         {data.map((row, i) => (
-         // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
          <tr key={i} className="group/row contents">
+          <RowGridLine
+           highlight={dragSource?.type === 'row' && dropTarget === i}
+           position={i}
+           onClickAdd={() => {
+            setData((prev) => insertRowBefore(prev, i))
+           }}
+          />
           <th
            scope="row"
-           className="sticky left-8 border-0 bg-stone-800"
+           className="sticky left-8 z-10 border-0 bg-stone-800"
            style={{ gridRowStart: i + 2, gridColumnStart: 1 }}
           >
-           <div className="-translate-x-full min-w-8 bg-stone-800">
+           <div
+            className="-translate-x-full flex h-full min-w-8 items-center gap-1 bg-stone-800"
+            draggable="true"
+            onDragStart={(e) => {
+             e.dataTransfer.effectAllowed = 'move'
+             setDragSource({ type: 'row', index: i })
+
+             e.dataTransfer.setData('text/csv', Papa.unparse([data[i]]))
+            }}
+            onDragEnter={(e) => e.preventDefault()}
+            onDragOver={(e) => {
+             e.preventDefault()
+             e.dataTransfer.dropEffect = 'move'
+
+             if (dragSource?.type === 'row') {
+              const rect = e.currentTarget.getBoundingClientRect()
+              const midpoint = rect.top + rect.height / 2
+              const dropIndex = e.clientY < midpoint ? i : i + 1
+              setDropTarget(dropIndex)
+             }
+            }}
+            onDrop={(e) => {
+             e.preventDefault()
+
+             if (!dragSource || dragSource.type !== 'row') {
+              return
+             }
+
+             const src = dragSource.index
+             const target = dropTarget ?? i
+             const dest = target <= src ? target : target - 1
+             if (src === dest) return
+
+             setData((prev) => moveRow(prev, src, dest))
+
+             setDragSource(null)
+            }}
+           >
             <HoverButton
              className="group-hover/row:opacity-100"
              onClick={() => selectRow(i)}
@@ -376,8 +469,8 @@ export default function App() {
            <td
             key={headers?.[0][j] || j}
             className={twMerge(
-             'min-h-[41px] min-w-[41px]', // the font is juust high enough that most cells will be 41px ..
-             'cursor-default whitespace-nowrap border border-stone-700 tabular-nums shadow-yellow-500 outline-0 outline-yellow-300/50 focus-within:bg-stone-600 focus-within:shadow-[inset_0_0_0_2px]',
+             'min-h-[41px] min-w-[41px]',
+             'cursor-default whitespace-nowrap tabular-nums shadow-yellow-500 outline-0 outline-yellow-300/50 focus-within:bg-stone-600 focus-within:shadow-[inset_0_0_0_2px]',
              selection && isCellInSelection(i, j, selection)
               ? 'bg-stone-600'
               : 'group-hover/row:bg-stone-700/10',
@@ -392,7 +485,6 @@ export default function App() {
             }}
             onKeyDown={(e) => handleCellKeyDown(i, j, e)}
             onClick={() => {
-             // if already selected
              if (
               selection &&
               selection.start.row === i &&
@@ -418,38 +510,15 @@ export default function App() {
             />
            </td>
           ))}
-          <HoverButton
-           className="group-hover/row:opacity-100"
-           style={{ gridRowStart: i + 2, gridColumnStart: row.length + 2 }}
-           onClick={() => {
-            const j = row.length
-            createCellIfMissing(i, j)
-            requestAnimationFrame(() => focusCell(i, j))
-           }}
-          >
-           +
-          </HoverButton>
          </tr>
         ))}
-        <tr className="contents">
-         {data[data.length - 1]?.map((_, j) => (
-          <td
-           // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-           key={j}
-           style={{ gridRowStart: data.length + 2, gridColumnStart: j + 2 }}
-          >
-           <HoverButton
-            onClick={() => {
-             const i = data.length
-             createCellIfMissing(i, j)
-             requestAnimationFrame(() => focusCell(i, j))
-            }}
-           >
-            +
-           </HoverButton>
-          </td>
-         ))}
-        </tr>
+        <RowGridLine
+         highlight={dragSource?.type === 'row' && dropTarget === data.length}
+         position={data.length}
+         onClickAdd={() => {
+          setData((prev) => insertRowBefore(prev, data.length))
+         }}
+        />
        </tbody>
       </table>
      </div>
@@ -461,23 +530,83 @@ export default function App() {
  )
 }
 
-function HoverButton(props: {
- className?: string
- style?: React.CSSProperties
- children: React.ReactNode
- onClick: () => void
-}) {
+const ColGridLine = (props: {
+ highlight: boolean
+ position: number
+ onClickAdd: () => void
+}) => {
+ const { highlight, position, onClickAdd } = props
+ return (
+  <div
+   className={twMerge(
+    '-ml-px relative z-20 h-full w-0 outline-1 outline-transparent has-hover:outline-yellow-500',
+    highlight && 'outline-yellow-500',
+   )}
+   style={{
+    gridRowStart: 1,
+    gridRowEnd: -2,
+    gridColumnStart: position + 2,
+   }}
+  >
+   <button
+    type="button"
+    onClick={onClickAdd}
+    className="-translate-x-1/2 absolute top-0 left-0 cursor-pointer bg-amber-500/50 p-px text-amber-200 opacity-0 transition-opacity hover:opacity-100"
+   >
+    <Plus size={24} />
+   </button>
+  </div>
+ )
+}
+
+const RowGridLine = (props: {
+ highlight: boolean
+ position: number
+ onClickAdd: () => void
+}) => {
+ const { highlight, position, onClickAdd } = props
+ return (
+  <div
+   className={twMerge(
+    '-mt-px relative z-20 h-0 w-full outline-1 outline-transparent has-hover:outline-yellow-500',
+    highlight && 'outline-yellow-500',
+   )}
+   style={{
+    gridColumnStart: 1,
+    gridColumnEnd: -1,
+    gridRowStart: position + 2,
+   }}
+  >
+   <button
+    type="button"
+    onClick={onClickAdd}
+    className="-translate-y-1/2 -translate-x-1/2 absolute top-0 left-0 cursor-pointer bg-amber-500/50 p-px text-amber-200 opacity-0 transition-opacity hover:opacity-100"
+   >
+    <Plus size={20} />
+   </button>
+  </div>
+ )
+}
+
+function HoverButton(
+ props: {
+  className?: string
+  children: React.ReactNode
+  onClick: () => void
+ } & React.HTMLAttributes<HTMLButtonElement>,
+) {
+ const { children, onClick, className, ...rest } = props
  return (
   <button
    type="button"
    className={twMerge(
     'flex h-full w-full grow cursor-pointer items-center justify-center self-center p-2 text-stone-500 opacity-20 transition-colors duration-150 hover:bg-stone-700 hover:text-stone-300 hover:opacity-100',
-    props.className,
+    className,
    )}
-   style={props.style}
-   onClick={props.onClick}
+   onClick={onClick}
+   {...rest}
   >
-   {props.children}
+   {children}
   </button>
  )
 }

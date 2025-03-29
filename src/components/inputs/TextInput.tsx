@@ -19,6 +19,7 @@ export const TextInput = (props: {
    <input
     type={type}
     inputMode={type === 'text' ? 'text' : 'numeric'}
+    placeholder={type === 'text' ? '""' : undefined}
     value={value}
     onChange={(e) => setValue(e.target.value)}
     onClick={() => {
