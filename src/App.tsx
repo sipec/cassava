@@ -335,7 +335,7 @@ export default function App() {
        }}
        role="grid"
       >
-       <thead className="contents">
+       <thead className="contents [writing-mode:vertical-rl]">
         <tr className="contents">
          <th scope="col">
           <span className="sr-only">#</span>
@@ -347,17 +347,15 @@ export default function App() {
             scope="col"
             className="sticky top-0 bg-stone-800"
            >
-            <div className="flex flex-col items-center">
-             <HoverButton
-              className={twMerge(
-               'group-hover/row:opacity-100',
-               title && 'opacity-75',
-              )}
-              onClick={() => selectColumn(j)}
-             >
-              {title || letter(j)}
-             </HoverButton>
-            </div>
+            <HoverButton
+             className={twMerge(
+              'justify-end group-hover/row:opacity-100',
+              title && 'opacity-75',
+             )}
+             onClick={() => selectColumn(j)}
+            >
+             {title || letter(j)}
+            </HoverButton>
            </th>
           ),
          )}
