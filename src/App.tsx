@@ -115,7 +115,11 @@ export default function App() {
   col: number,
   e: React.KeyboardEvent<HTMLTableCellElement>,
  ) {
-  const navigate = (newRow: number, newCol: number) => {
+  const navigate = (
+   newRow: number,
+   newCol: number,
+   create?: 'row' | 'col' | null,
+  ) => {
    e.preventDefault()
 
    if (newCol < 0) {
@@ -124,7 +128,8 @@ export default function App() {
 
    if (newRow < 0) return
 
-   createCellIfMissing(newRow, newCol)
+   if (create) createCellIfMissing(newRow, newCol, create)
+   else if (newRow > data.length - 1 || newCol > data[newRow].length - 1) return
 
    if (e.shiftKey) {
     setSelection((prev) => ({
@@ -211,11 +216,11 @@ export default function App() {
     break
    case 'Tab':
     if (e.shiftKey) navigate(row, col - 1)
-    else navigate(row, col + 1)
+    else navigate(row, col + 1, 'col')
     break
    case 'Enter':
     if (!e.shiftKey) {
-     navigate(row + 1, col)
+     navigate(row + 1, col, 'row')
     }
     break
    case 'Backspace':
@@ -223,40 +228,22 @@ export default function App() {
     if (selection && !isSingular(selection)) {
      // delete selection
      setData((data) => deleteSelection({ selection, data }))
-    } else if (e.altKey) {
-     // hard delete cell if it's at the end of the row.
-     setData((prevData) => {
-      const newData = structuredClone(prevData)
-      const newRow = newData[row]
-      if (newRow) {
-       if (col >= newRow.length - 1) {
-        newRow.splice(col, 1)
-       } else {
-        newRow[col] = ''
-       }
-      }
-      // check if we deleted the last item in this row
-      if (newRow && newRow.length === 0) {
-       newData.splice(row, 1)
-      }
-
-      return newData
-     })
-     navigate(row, col - 1)
     }
+    navigate(row, col - 1)
     break
   }
  }
 
- function createCellIfMissing(newRow: number, newCol: number) {
-  if (data[newRow] == null || data[newRow][newCol] == null) {
-   setData((prevData) => {
-    const newData = structuredClone(prevData)
-    while (newData[newRow] == null) newData.push([])
-    const row = newData[newRow]
-    while (row[newCol] == null) row.push('')
-    return newData
-   })
+ function createCellIfMissing(
+  newRow: number,
+  newCol: number,
+  create: 'row' | 'col',
+ ) {
+  if (create === 'row' && data[newRow] == null) {
+   setData((data) => insertRowBefore(data, newRow))
+  }
+  if (create === 'col' && data[newRow]?.[newCol] == null) {
+   setData((data) => insertColumnBefore(data, newCol))
   }
  }
 
