@@ -484,7 +484,7 @@ export default function App() {
                value={cell}
                setValue={(value) => handleCellEdit(i, j, value)}
                nullDefault={nullDefaults?.[j]}
-               type={(isCassava && types?.[j]) || 'string'}
+               type={(isCassava && types?.[j]) || 'text'}
               />
              </td>
             )),

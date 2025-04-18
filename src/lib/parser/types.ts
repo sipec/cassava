@@ -1,5 +1,5 @@
 export type ColumnType =
- | 'string'
+ | 'text'
  | 'number'
  | 'date'
  | 'logical'
@@ -7,11 +7,11 @@ export type ColumnType =
  | 'multiselect'
 
 export const parseColumnType = (type: string): ColumnType => {
- if (!type) return 'string'
+ if (!type) return 'text'
 
  const [baseType] = type.split(':')
  switch (baseType) {
-  case 'string':
+  case 'text':
   case 'number':
   case 'date':
   case 'logical':
@@ -20,7 +20,7 @@ export const parseColumnType = (type: string): ColumnType => {
    return baseType
   default:
    console.warn(`Unknown column type: ${type}, falling back to string`)
-   return 'string'
+   return 'text'
  }
 }
 
