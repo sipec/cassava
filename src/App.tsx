@@ -284,7 +284,7 @@ export default function App() {
      </div>
      <div className="relative min-h-0 grow overflow-auto">
       <table
-       className="mx-8 grid w-fit border-collapse"
+       className="mx-8 grid w-fit border-collapse pr-[calc(100vw-8rem)] pb-[calc(100vh-8rem)]"
        style={{
         gridTemplateColumns: `0 repeat(${((headers || data)[0]?.length || 0) + 1}, max-content) max-content`,
         gridTemplateRows: `repeat(${data.length + 1}, max-content) max-content`,
@@ -309,8 +309,12 @@ export default function App() {
         )}
        >
         <tr className="contents">
-         <th scope="col">
-          <span className="sr-only">#</span>
+         <th
+          scope="col"
+          className="sticky top-0 left-8 z-20 h-full w-full items-end"
+          style={{ gridRowStart: 1, gridColumnStart: 1 }}
+         >
+          <div className="h-full min-w-8 bg-stone-800" />
          </th>
          {displayCols(
           (headers?.[0] || Array(data[0]?.length || 0)).map((title, j) => (
@@ -363,7 +367,9 @@ export default function App() {
              )}
              onClick={() => selectColumn(j)}
             >
-             <span>{(isCassava && title) || letter(j)}</span>
+             <span className="sticky left-8">
+              {(isCassava && title) || letter(j)}
+             </span>
             </HoverButton>
            </th>
           )),
