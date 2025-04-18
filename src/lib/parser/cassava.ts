@@ -1,37 +1,37 @@
 type CassavaParsed =
  | {
-    headers: string[][]
-    data: string[][]
     isCassava: true
+    data: string[][]
+    firstBodyRow: number
    }
  | {
-    headers: null
-    data: string[][]
     isCassava: false
+    data: string[][]
+    firstBodyRow: 0
    }
 
 export const parseCassava = (csv: string[][]): CassavaParsed => {
  // Handle non-cassava files
  if (!csv[0]?.length || csv[0][0] !== '0-cassava') {
   return {
-   headers: null,
-   data: csv,
    isCassava: false,
+   data: csv,
+   firstBodyRow: 0,
   }
  }
 
  // Handle cassava files
  const firstRow = csv.findIndex((row) => !row[0]?.startsWith('0'))
  if (firstRow === -1) {
-  console.warn('No data rows found in cassava file')
+  console.log('No data rows found in cassava file')
   return {
-   headers: csv,
-   data: [],
    isCassava: true,
+   data: csv,
+   firstBodyRow: csv.length,
   }
  }
 
- const data = csv.slice(firstRow)
+ const body = csv.slice(firstRow)
  const rawHeaders = csv.slice(0, firstRow)
  const headers = rawHeaders.sort(
   compareBy((row: string[]) => {
@@ -44,9 +44,9 @@ export const parseCassava = (csv: string[][]): CassavaParsed => {
  )
 
  return {
-  headers,
-  data,
   isCassava: true,
+  data: [...headers, ...body],
+  firstBodyRow: firstRow,
  }
 }
 

@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { Check, Plus, X } from 'lucide-react'
 import Papa from 'papaparse'
 import { useEffect, useRef, useState } from 'react'
 import { twMerge } from 'tailwind-merge'
@@ -16,24 +16,16 @@ import {
 
 export default function App() {
  const [isCassava, setIsCassava] = useState(false)
- const [headers, setHeaders] = useState<string[][] | null>(null)
- const [rawData, setRawData] = useState<string[][]>([[]])
- const data = !isCassava ? rawData : rawData.map((row) => row.slice(1))
- const setData = (
-  data: string[][] | ((prevData: string[][]) => string[][]),
- ) => {
-  setRawData((raw) => {
-   const inputData = !isCassava ? raw : raw.map((row) => row.slice(1))
-   const output = typeof data === 'function' ? data(inputData) : data
-   if (!isCassava) return output
-   return output.map((row, i) => [(i + 1).toString(), ...row])
-  })
- }
+ const [firstBodyRow, setFirstBodyRow] = useState(0)
+ const [data, setData] = useState<string[][]>([[]])
+ const headers = data.slice(0, firstBodyRow)
 
- const types = headers?.[THE_ORDER.indexOf('type')].slice(1) as
-  | ColumnType[]
-  | undefined
- const nullDefaults = headers?.[THE_ORDER.indexOf('null-default')].slice(1)
+ const displayCols = <T,>(arr: T[]) => (isCassava ? arr.slice(1) : arr)
+ const displayRows = <T,>(arr: T[]) =>
+  isCassava ? arr.slice(firstBodyRow) : arr
+
+ const types = headers?.[THE_ORDER.indexOf('type')] as ColumnType[] | undefined
+ const nullDefaults = headers?.[THE_ORDER.indexOf('null-default')]
 
  const [selection, setSelection] = useState<Selection | null>(null)
  type Mode = 'visual' | 'edit' | 'command'
@@ -53,11 +45,10 @@ export default function App() {
   Papa.parse<string[]>(csv, {
    skipEmptyLines: true,
    complete: (results) => {
-    const { headers, data, isCassava } = parseCassava(results.data)
-
-    setHeaders(headers)
-    setRawData(data)
+    const { isCassava, data, firstBodyRow } = parseCassava(results.data)
     setIsCassava(isCassava)
+    setData(data)
+    setFirstBodyRow(firstBodyRow)
    },
    error: (error: unknown) => {
     console.error('Error parsing CSV:', error)
@@ -82,19 +73,10 @@ export default function App() {
   if (!currentPath) return
 
   const timeoutId = setTimeout(() => {
-   let output: string[][]
-
-   if (isCassava) {
-    // Add back headers and line numbers
-    output = [...(headers ?? []), ...rawData]
-   } else {
-    output = rawData
-   }
-
-   if (output.length) saveFile(currentPath, Papa.unparse(output))
+   if (data.length) saveFile(currentPath, Papa.unparse(data))
   }, 1000)
   return () => clearTimeout(timeoutId)
- }, [rawData, currentPath, headers])
+ }, [data, currentPath, headers])
 
  function handleCellEdit(row: number, col: number, value: string) {
   if (row < 0 || col < 0 || Number.isNaN(row) || Number.isNaN(col)) {
@@ -228,8 +210,8 @@ export default function App() {
     if (selection && !isSingular(selection)) {
      // delete selection
      setData((data) => deleteSelection({ selection, data }))
+     navigate(row, col - 1)
     }
-    navigate(row, col - 1)
     break
   }
  }
@@ -309,27 +291,31 @@ export default function App() {
        }}
        role="grid"
       >
-       {Array.from({ length: (data[0]?.length || 0) + 1 }).map((_, j) => (
-        <ColGridLine
-         key={j}
-         position={j}
-         highlight={dragSource?.type === 'col' && dropTarget === j}
-         onClickAdd={() => {
-          setData((prev) => insertColumnBefore(prev, j))
-          setHeaders((prev) => insertColumnBefore(prev || [], j + 1))
-         }}
-        />
-       ))}
+       {displayCols(
+        Array.from({ length: (data[0]?.length || 0) + 1 }).map((_, j) => (
+         <ColGridLine
+          key={j}
+          position={j}
+          highlight={dragSource?.type === 'col' && dropTarget === j}
+          onClickAdd={() => setData((prev) => insertColumnBefore(prev, j))}
+         />
+        )),
+       )}
 
-       <thead className="contents [writing-mode:vertical-rl]">
+       <thead
+        className={twMerge(
+         'contents',
+         isCassava && '[writing-mode:vertical-rl]',
+        )}
+       >
         <tr className="contents">
          <th scope="col">
           <span className="sr-only">#</span>
          </th>
-         {(headers?.[0].slice(1) || Array(data[0]?.length || 0)).map(
-          (title, j) => (
+         {displayCols(
+          (headers?.[0] || Array(data[0]?.length || 0)).map((title, j) => (
            <th
-            key={title || j}
+            key={j}
             scope="col"
             className="group/col sticky top-0 z-10 bg-stone-800"
             style={{ gridRowStart: 1, gridColumnStart: j + 2 }}
@@ -338,13 +324,7 @@ export default function App() {
              e.dataTransfer.effectAllowed = 'move'
              setDragSource({ type: 'col', index: j })
 
-             e.dataTransfer.setData(
-              'text/csv',
-              Papa.unparse([
-               ...(isCassava ? [] : (headers?.[j + 1] ?? [])),
-               ...data.map((row) => [row[j]]),
-              ]),
-             )
+             e.dataTransfer.setData('text/csv', Papa.unparse(data))
             }}
             onDragEnter={(e) => e.preventDefault()}
             onDragOver={(e) => {
@@ -371,134 +351,141 @@ export default function App() {
              if (src === dest) return
 
              setData((prev) => moveColumn(prev, src, dest))
-             setHeaders((prev) => prev && moveColumn(prev, src + 1, dest + 1))
 
              setDragSource(null)
             }}
            >
             <HoverButton
              className={twMerge(
-              'items-start justify-end group-hover/row:opacity-100',
+              'items-start group-hover/row:opacity-100',
+              isCassava ? 'items-end justify-end' : 'justify-start',
               title && 'opacity-75',
              )}
              onClick={() => selectColumn(j)}
             >
-             <span>{title || letter(j)}</span>
+             <span>{(isCassava && title) || letter(j)}</span>
             </HoverButton>
            </th>
-          ),
+          )),
          )}
         </tr>
        </thead>
        <tbody ref={tableRef} className="contents">
-        {data.map((row, i) => (
-         <tr key={i} className="group/row contents">
-          <RowGridLine
-           highlight={dragSource?.type === 'row' && dropTarget === i}
-           position={i}
-           onClickAdd={() => {
-            setData((prev) => insertRowBefore(prev, i))
-           }}
-          />
-          <th
-           scope="row"
-           className="sticky left-8 z-10 border-0 bg-stone-800"
-           style={{ gridRowStart: i + 2, gridColumnStart: 1 }}
-          >
-           <div
-            className="-translate-x-full flex h-full min-w-8 items-center gap-1 bg-stone-800"
-            draggable="true"
-            onDragStart={(e) => {
-             e.dataTransfer.effectAllowed = 'move'
-             setDragSource({ type: 'row', index: i })
-
-             e.dataTransfer.setData('text/csv', Papa.unparse([data[i]]))
+        {displayRows(
+         data.map((row, i) => (
+          <tr key={i} className="group/row contents">
+           <RowGridLine
+            highlight={dragSource?.type === 'row' && dropTarget === i}
+            position={i}
+            onClickAdd={() => {
+             setData((prev) => insertRowBefore(prev, i))
             }}
-            onDragEnter={(e) => e.preventDefault()}
-            onDragOver={(e) => {
-             e.preventDefault()
-             e.dataTransfer.dropEffect = 'move'
-
-             if (dragSource?.type === 'row') {
-              const rect = e.currentTarget.getBoundingClientRect()
-              const midpoint = rect.top + rect.height / 2
-              const dropIndex = e.clientY < midpoint ? i : i + 1
-              setDropTarget(dropIndex)
-             }
-            }}
-            onDrop={(e) => {
-             e.preventDefault()
-
-             if (!dragSource || dragSource.type !== 'row') {
-              return
-             }
-
-             const src = dragSource.index
-             const target = dropTarget ?? i
-             const dest = target <= src ? target : target - 1
-             if (src === dest) return
-
-             setData((prev) => moveRow(prev, src, dest))
-
-             setDragSource(null)
-            }}
+           />
+           <th
+            scope="row"
+            className="sticky left-8 z-10 border-0 bg-stone-800"
+            style={{ gridRowStart: i + 2, gridColumnStart: 1 }}
            >
-            <HoverButton
-             className="group-hover/row:opacity-100"
-             onClick={() => selectRow(i)}
+            <div
+             className="-translate-x-full flex h-full min-w-8 items-center gap-1 bg-stone-800"
+             draggable="true"
+             onDragStart={(e) => {
+              e.dataTransfer.effectAllowed = 'move'
+              setDragSource({ type: 'row', index: i })
+
+              e.dataTransfer.setData('text/csv', Papa.unparse([data[i]]))
+             }}
+             onDragEnter={(e) => e.preventDefault()}
+             onDragOver={(e) => {
+              e.preventDefault()
+              e.dataTransfer.dropEffect = 'move'
+
+              if (dragSource?.type === 'row') {
+               const rect = e.currentTarget.getBoundingClientRect()
+               const midpoint = rect.top + rect.height / 2
+               const dropIndex = e.clientY < midpoint ? i : i + 1
+               setDropTarget(dropIndex)
+              }
+             }}
+             onDrop={(e) => {
+              e.preventDefault()
+
+              if (!dragSource || dragSource.type !== 'row') {
+               return
+              }
+
+              const src = dragSource.index
+              const target = dropTarget ?? i
+              const dest = target <= src ? target : target - 1
+              if (src === dest) return
+
+              setData((prev) => moveRow(prev, src, dest))
+
+              setDragSource(null)
+             }}
             >
-             {i + 1}
-            </HoverButton>
-           </div>
-          </th>
+             <HoverButton
+              className="group-hover/row:opacity-100"
+              onClick={() => selectRow(i)}
+             >
+              {Math.max(0, i - firstBodyRow + 1)}
+             </HoverButton>
+            </div>
+           </th>
 
-          {row.map((cell, j) => (
-           <td
-            key={headers?.[0][j] || j}
-            className={twMerge(
-             'min-h-[41px] min-w-[41px]',
-             'cursor-default whitespace-nowrap tabular-nums shadow-yellow-500 outline-0 outline-yellow-300/50 focus-within:bg-stone-600 focus-within:shadow-[inset_0_0_0_2px]',
-             selection && isCellInSelection(i, j, selection)
-              ? 'bg-stone-600'
-              : 'group-hover/row:bg-stone-700/10',
-             mode === 'edit' && 'focus:outline-2',
-            )}
-            style={{ gridRowStart: i + 2, gridColumnStart: j + 2 }}
-            onBlur={(e) => {
-             if (e.relatedTarget?.parentElement?.tagName !== 'TD') {
-              setMode('visual')
-              setSelection(null)
-             }
-            }}
-            onKeyDown={(e) => handleCellKeyDown(i, j, e)}
-            onClick={() => {
-             if (
-              selection &&
-              selection.start.row === i &&
-              selection.start.col === j
-             ) {
-              setMode('edit')
-             } else {
-              setMode('visual')
-             }
+           {displayCols(
+            row.map((cell, j) => (
+             <td
+              key={j}
+              className={twMerge(
+               'min-h-[41px] min-w-[41px]',
+               'cursor-default whitespace-nowrap tabular-nums shadow-yellow-500 outline-0 outline-yellow-300/50 focus-within:bg-stone-600 focus-within:shadow-[inset_0_0_0_2px]',
+               selection && isCellInSelection(i, j, selection)
+                ? 'bg-stone-600'
+                : 'group-hover/row:bg-stone-700/10',
+               mode === 'edit' && 'focus:outline-2',
+               !isCassava &&
+                i < firstBodyRow &&
+                (i === 0 ? 'font-bold' : 'italic'),
+              )}
+              style={{ gridRowStart: i + 2, gridColumnStart: j + 2 }}
+              onBlur={(e) => {
+               if (e.relatedTarget?.parentElement?.tagName !== 'TD') {
+                setMode('visual')
+                setSelection(null)
+               }
+              }}
+              onKeyDown={(e) => handleCellKeyDown(i, j, e)}
+              onClick={(e) => {
+               if (
+                selection &&
+                selection.start.row === i &&
+                selection.start.col === j
+               ) {
+                setMode('edit')
+               } else {
+                setMode('visual')
+               }
 
-             setSelection({
-              start: { row: i, col: j },
-              end: { row: i, col: j },
-             })
-             focusCell(i, j)
-            }}
-           >
-            <CellInput
-             value={cell}
-             setValue={(value) => handleCellEdit(i, j, value)}
-             nullDefault={nullDefaults?.[j]}
-             type={(isCassava && types?.[j]) || 'string'}
-            />
-           </td>
-          ))}
-         </tr>
-        ))}
+               setSelection({
+                start: { row: i, col: j },
+                end: { row: i, col: j },
+               })
+               ;(e.target as HTMLElement).focus()
+              }}
+             >
+              <CellInput
+               value={cell}
+               setValue={(value) => handleCellEdit(i, j, value)}
+               nullDefault={nullDefaults?.[j]}
+               type={(isCassava && types?.[j]) || 'string'}
+              />
+             </td>
+            )),
+           )}
+          </tr>
+         )),
+        )}
         <RowGridLine
          highlight={dragSource?.type === 'row' && dropTarget === data.length}
          position={data.length}
