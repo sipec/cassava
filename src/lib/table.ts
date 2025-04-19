@@ -23,10 +23,14 @@ export function moveColumn(
  })
 }
 
-export function deleteColumn(data: string[][], index: number): string[][] {
+export function deleteColumns(
+ data: string[][],
+ indexLo: number,
+ indexHi: number,
+): string[][] {
  return data.map((row) => {
   const newRow = [...row]
-  newRow.splice(index, 1)
+  newRow.splice(indexLo, indexHi - indexLo + 1)
   return newRow
  })
 }
@@ -50,8 +54,12 @@ export function moveRow(
  return newData
 }
 
-export const deleteRow = (data: string[][], index: number): string[][] => {
+export const deleteRows = (
+ data: string[][],
+ indexLo: number,
+ indexHi: number,
+): string[][] => {
  const newData = [...data]
- newData.splice(index, 1)
+ newData.splice(indexLo, indexHi - indexLo + 1)
  return newData
 }

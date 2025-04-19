@@ -24,7 +24,7 @@
 - [ ] Column/Row operations
   - [x] Reorder
   - [x] Insert
-  - [ ] Delete
+  - [x] Delete
   - [ ] Filter
   - [ ] Sort
 - [ ] Search functionality

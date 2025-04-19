@@ -1,4 +1,4 @@
-import { Check, Plus, X } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import Papa from 'papaparse'
 import { useEffect, useRef, useState } from 'react'
 import { twMerge } from 'tailwind-merge'
@@ -8,6 +8,8 @@ import { readFile, saveFile } from './lib/files'
 import { THE_ORDER, parseCassava } from './lib/parser/cassava'
 import type { ColumnType } from './lib/parser/types'
 import {
+ deleteColumns,
+ deleteRows,
  insertColumnBefore,
  insertRowBefore,
  moveColumn,
@@ -128,7 +130,7 @@ export default function App() {
    setMode('visual')
 
    requestAnimationFrame(() => {
-    focusCell(newRow, newCol)
+    getCellInputAt(newRow, newCol)?.focus()
    })
   }
 
@@ -167,11 +169,6 @@ export default function App() {
     }
     break
 
-   case 'Escape':
-    e.preventDefault()
-    if (mode !== 'visual') setMode('visual')
-    else setSelection(null)
-    break
    case 'Home':
     if (e.metaKey) navigate(0, col)
     else navigate(0, 0)
@@ -207,10 +204,9 @@ export default function App() {
     break
    case 'Backspace':
    case 'Clear':
-    if (selection && !isSingular(selection)) {
-     // delete selection
+    if (selection && mode === 'visual' && !(e.metaKey || e.ctrlKey)) {
      setData((data) => deleteSelection({ selection, data }))
-     navigate(row, col - 1)
+     if (isSingular(selection)) navigate(row, col - 1)
     }
     break
   }
@@ -231,18 +227,15 @@ export default function App() {
 
  const tableRef = useRef<HTMLTableSectionElement>(null)
 
- function focusCell(row: number, col: number) {
-  const table = tableRef.current
-  const elem = table?.querySelector(
-   `tr:nth-of-type(${row + 1}) td:nth-of-type(${col + 1}) input`,
+ function getCellInputAt(row: number, col: number) {
+  return tableRef.current?.querySelector(
+   `[data-row="${row}"][data-col="${col}"] input`,
   ) as HTMLInputElement | null
-  if (!elem) return
-  elem.focus()
  }
 
  function selectColumn(col: number) {
   setSelection({
-   start: { row: 0, col },
+   start: { row: -1, col },
    end: { row: data.length - 1, col },
   })
   setMode('visual')
@@ -250,7 +243,7 @@ export default function App() {
 
  function selectRow(row: number) {
   setSelection({
-   start: { row, col: 0 },
+   start: { row, col: -1 },
    end: { row, col: data[row].length - 1 },
   })
   setMode('visual')
@@ -290,6 +283,35 @@ export default function App() {
         gridTemplateRows: `repeat(${data.length + 1}, max-content) max-content`,
        }}
        role="grid"
+       onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) {
+         setMode('visual')
+         setSelection(null)
+        }
+       }}
+       onKeyDown={(e) => {
+        console.log(e)
+        switch (e.key) {
+         case 'Escape':
+          e.preventDefault()
+          if (mode !== 'visual') setMode('visual')
+          else setSelection(null)
+          break
+         case 'Backspace':
+         case 'Clear':
+          if (selection) {
+           setData((data) => {
+            const { rowLo, colLo, rowHi, colHi } = getBounds(selection)
+
+            if (rowLo < 0 && colLo < 0) return [[]]
+            if (colLo < 0) return deleteRows(data, rowLo, rowHi)
+            if (rowLo < 0) return deleteColumns(data, colLo, colHi)
+            return data
+           })
+          }
+          break
+        }
+       }}
       >
        {displayCols(
         Array.from({ length: (data[0]?.length || 0) + 1 }).map((_, j) => (
@@ -365,7 +387,11 @@ export default function App() {
               isCassava ? 'items-end justify-end' : 'justify-start',
               title && 'opacity-75',
              )}
-             onClick={() => selectColumn(j)}
+             aria-selected={!!selection && isCellInSelection(-1, j, selection)}
+             onClick={(e) => {
+              e.currentTarget.focus()
+              selectColumn(j)
+             }}
             >
              <span className="sticky left-8">
               {(isCassava && title) || letter(j)}
@@ -432,7 +458,11 @@ export default function App() {
             >
              <HoverButton
               className="group-hover/row:opacity-100"
-              onClick={() => selectRow(i)}
+              onClick={(e) => {
+               e.currentTarget.focus()
+               selectRow(i)
+              }}
+              aria-selected={!!selection && isCellInSelection(i, -1, selection)}
              >
               {Math.max(0, i - firstBodyRow + 1)}
              </HoverButton>
@@ -446,23 +476,19 @@ export default function App() {
               className={twMerge(
                'min-h-[41px] min-w-[41px]',
                'cursor-default whitespace-nowrap tabular-nums shadow-yellow-500 outline-0 outline-yellow-300/50 focus-within:bg-stone-600 focus-within:shadow-[inset_0_0_0_2px]',
-               selection && isCellInSelection(i, j, selection)
-                ? 'bg-stone-600'
-                : 'group-hover/row:bg-stone-700/10',
+               'group-hover/row:bg-stone-700/10 aria-selected:bg-stone-600',
                mode === 'edit' && 'focus:outline-2',
                !isCassava &&
                 i < firstBodyRow &&
                 (i === 0 ? 'font-bold' : 'italic'),
               )}
+              data-row={i}
+              data-col={j}
+              role="gridcell"
+              aria-selected={!!selection && isCellInSelection(i, j, selection)}
               style={{ gridRowStart: i + 2, gridColumnStart: j + 2 }}
-              onBlur={(e) => {
-               if (e.relatedTarget?.parentElement?.tagName !== 'TD') {
-                setMode('visual')
-                setSelection(null)
-               }
-              }}
               onKeyDown={(e) => handleCellKeyDown(i, j, e)}
-              onClick={(e) => {
+              onClick={() => {
                if (
                 selection &&
                 selection.start.row === i &&
@@ -477,7 +503,6 @@ export default function App() {
                 start: { row: i, col: j },
                 end: { row: i, col: j },
                })
-               ;(e.target as HTMLElement).focus()
               }}
              >
               <CellInput
@@ -568,22 +593,15 @@ const RowGridLine = (props: {
  )
 }
 
-function HoverButton(
- props: {
-  className?: string
-  children: React.ReactNode
-  onClick: () => void
- } & React.HTMLAttributes<HTMLButtonElement>,
-) {
- const { children, onClick, className, ...rest } = props
+function HoverButton(props: React.HTMLAttributes<HTMLButtonElement>) {
+ const { children, className, ...rest } = props
  return (
   <button
    type="button"
    className={twMerge(
-    'flex h-full w-full grow cursor-pointer items-center justify-center self-center p-2 text-stone-500 opacity-20 transition-colors duration-150 hover:bg-stone-700 hover:text-stone-300 hover:opacity-100',
+    'flex h-full w-full grow cursor-pointer items-center justify-center self-center p-2 text-stone-500 opacity-20 shadow-yellow-500 outline-0 transition-colors duration-150 hover:bg-stone-700 hover:text-stone-300 hover:opacity-100 focus-visible:shadow-[inset_0_0_0_2px] aria-selected:bg-stone-700',
     className,
    )}
-   onClick={onClick}
    {...rest}
   >
    {children}
