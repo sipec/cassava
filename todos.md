@@ -1,6 +1,6 @@
 # Project TODOs
 
-- if not enough headers, it does not add them and instead makes stuff up
+- copy paste code is there but not working. need to hook into tauri.
 
 ## MVP Features
 
@@ -9,6 +9,7 @@
 - [x] Table-based editor interface
 - [x] Save/export functionality
   - [x] Autosave
+  - [ ] Rename and move file
 - [x] Support for Cassava-flavored CSV
   - [x] Parse enhanced headers (0-type, 0-default)
   - [ ] Basic type validation
@@ -22,6 +23,8 @@
 - [ ] Computed fields (formulas)
 - [ ] Column/Row operations
   - [x] Reorder
+  - [x] Insert
+  - [ ] Delete
   - [ ] Filter
   - [ ] Sort
 - [ ] Search functionality
@@ -31,6 +34,7 @@
 - [ ] Copy paste
 - [ ] Undo/redo
 - [ ] Multiple file tabs
+- [ ] Put filename in title
 
 ## Future Enhancements
 
