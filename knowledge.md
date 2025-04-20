@@ -40,6 +40,9 @@ This is a csv editor that wants to be a spreasheet when it grows up.
 - Keep parsing logic separate in lib/parser
 - Focus on simplicity over performance initially
 - Add error boundaries around key components
+- CSV rows with missing fields are padded with empty strings to match the longest row length
+  - This matches spreadsheet behavior and preserves all data
+  - Empty strings are treated as null values by our type system
 
 Component Style:
 

@@ -37,7 +37,7 @@ export function deleteColumns(
 
 export function insertRowBefore(data: string[][], index: number): string[][] {
  const newData = [...data]
- const width = Math.max(...data.map((row) => row.length))
+ const width = data[0]?.length || 0
  newData.splice(index, 0, Array(width).fill(''))
  return newData
 }

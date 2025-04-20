@@ -11,28 +11,32 @@ type CassavaParsed =
    }
 
 export const parseCassava = (csv: string[][]): CassavaParsed => {
+ // Rectangularize
+ const max = Math.max(...csv.map((row) => row.length))
+ const ret = csv.map((row) => padEnd(row, max, ''))
+
  // Handle non-cassava files
- if (!csv[0]?.length || csv[0][0] !== '0-cassava') {
+ if (!ret[0]?.length || ret[0][0] !== '0-cassava') {
   return {
    isCassava: false,
-   data: csv,
+   data: ret,
    firstBodyRow: 0,
   }
  }
 
  // Handle cassava files
- const firstRow = csv.findIndex((row) => !row[0]?.startsWith('0'))
+ const firstRow = ret.findIndex((row) => !row[0]?.startsWith('0'))
  if (firstRow === -1) {
   console.log('No data rows found in cassava file')
   return {
    isCassava: true,
-   data: csv,
-   firstBodyRow: csv.length,
+   data: ret,
+   firstBodyRow: ret.length,
   }
  }
 
- const body = csv.slice(firstRow)
- const rawHeaders = csv.slice(0, firstRow)
+ const body = ret.slice(firstRow)
+ const rawHeaders = ret.slice(0, firstRow)
  const headers = rawHeaders.sort(
   compareBy((row: string[]) => {
    // strip beginning '0-' prefix
@@ -48,6 +52,10 @@ export const parseCassava = (csv: string[][]): CassavaParsed => {
   data: [...headers, ...body],
   firstBodyRow: firstRow,
  }
+}
+
+const padEnd = <T>(arr: T[], length: number, value: T): T[] => {
+ return [...arr, ...Array(length - arr.length).fill(value)]
 }
 
 export const THE_ORDER = [
