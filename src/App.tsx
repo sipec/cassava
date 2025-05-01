@@ -290,7 +290,6 @@ export default function App() {
         }
        }}
        onKeyDown={(e) => {
-        console.log(e)
         switch (e.key) {
          case 'Escape':
           e.preventDefault()
@@ -477,7 +476,7 @@ export default function App() {
                'min-h-[41px] min-w-[41px]',
                'cursor-default whitespace-nowrap tabular-nums shadow-yellow-500 outline-0 outline-yellow-300/50 focus-within:bg-stone-600 focus-within:shadow-[inset_0_0_0_2px]',
                'group-hover/row:bg-stone-700/10 aria-selected:bg-stone-600',
-               mode === 'edit' && 'focus:outline-2',
+               mode === 'edit' && 'focus-within:outline-2',
                !isCassava &&
                 i < firstBodyRow &&
                 (i === 0 ? 'font-bold' : 'italic'),
@@ -488,8 +487,11 @@ export default function App() {
               aria-selected={!!selection && isCellInSelection(i, j, selection)}
               style={{ gridRowStart: i + 2, gridColumnStart: j + 2 }}
               onKeyDown={(e) => handleCellKeyDown(i, j, e)}
-              onClick={() => {
+              onInput={() => setMode('edit')}
+              onClick={(e) => {
                if (
+                !e.shiftKey &&
+                !e.ctrlKey &&
                 selection &&
                 selection.start.row === i &&
                 selection.start.col === j
