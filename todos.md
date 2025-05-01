@@ -20,7 +20,7 @@
   - [x] Checkboxes (booleans)
   - [x] Date formatting
   - [x] Dropdowns select & multi-select (enums)
-- [ ] Computed fields (formulas)
+- [x] Computed fields (formulas)
 - [ ] Column/Row operations
   - [x] Reorder
   - [x] Insert

@@ -26,8 +26,9 @@
     "useExhaustiveDependencies": "off",
     "useHookAtTopLevel": "error"
    },
-   "style": { "noNamespace": "error" },
+   "style": { "noNamespace": "error", "noNonNullAssertion": "off" },
    "suspicious": {
+    "noAssignInExpressions": "off",
     "noEmptyBlockStatements": "warn",
     "noExplicitAny": "off",
     "noArrayIndexKey": "warn"

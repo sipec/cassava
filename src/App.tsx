@@ -5,6 +5,7 @@ import { twMerge } from 'tailwind-merge'
 import { CellInput } from './components/CellInput'
 import { Empty } from './components/Empty'
 import { readFile, saveFile } from './lib/files'
+import { getDisplayData, loadForumula } from './lib/formulas'
 import { THE_ORDER, parseCassava } from './lib/parser/cassava'
 import type { ColumnType } from './lib/parser/types'
 import {
@@ -20,6 +21,7 @@ export default function App() {
  const [isCassava, setIsCassava] = useState(false)
  const [firstBodyRow, setFirstBodyRow] = useState(0)
  const [data, setData] = useState<string[][]>([[]])
+ const [displayData, setDisplayData] = useState<string[][]>([[]])
  const headers = data.slice(0, firstBodyRow)
 
  const displayCols = <T,>(arr: T[]) => (isCassava ? arr.slice(1) : arr)
@@ -51,6 +53,10 @@ export default function App() {
     setIsCassava(isCassava)
     setData(data)
     setFirstBodyRow(firstBodyRow)
+
+    // Load into HyperFormula
+    loadForumula(path, data)
+    setDisplayData(getDisplayData(path))
    },
    error: (error: unknown) => {
     console.error('Error parsing CSV:', error)
@@ -59,17 +65,15 @@ export default function App() {
  }
 
  useEffect(() => {
-  if (!currentPath) return
-
   const onFocus = () => {
-   handleFile(currentPath)
+   if (currentPath) handleFile(currentPath)
   }
 
   window.addEventListener('focus', onFocus)
   return () => {
    window.removeEventListener('focus', onFocus)
   }
- }, [currentPath])
+ }, [])
 
  useEffect(() => {
   if (!currentPath) return
@@ -92,6 +96,12 @@ export default function App() {
    if (value || newData[row]?.[col] != null) newData[row][col] = value
    return newData
   })
+
+  // Update formula display after edit
+  if (currentPath) {
+   loadForumula(currentPath, data)
+   setDisplayData(getDisplayData(currentPath))
+  }
  }
 
  function handleCellKeyDown(
@@ -508,7 +518,11 @@ export default function App() {
               }}
              >
               <CellInput
-               value={cell}
+               value={
+                selection?.end.row === i && selection?.end.col === j
+                 ? cell
+                 : String(displayData[i]?.[j] ?? '')
+               }
                setValue={(value) => handleCellEdit(i, j, value)}
                nullDefault={nullDefaults?.[j]}
                type={(isCassava && types?.[j]) || 'text'}
