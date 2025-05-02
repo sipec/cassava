@@ -1,11 +1,13 @@
+import { produce } from 'immer'
+
 export function insertColumnBefore(
  data: string[][],
  index: number,
 ): string[][] {
- return data.map((row) => {
-  const newRow = [...row]
-  newRow.splice(index, 0, '')
-  return newRow
+ return produce(data, (draft) => {
+  for (const row of draft) {
+   row.splice(index, 0, '')
+  }
  })
 }
 
@@ -15,11 +17,12 @@ export function moveColumn(
  destIndex: number,
 ): string[][] {
  if (srcIndex === destIndex) return data
- return data.map((row) => {
-  const newRow = [...row]
-  const [col] = newRow.splice(srcIndex, 1)
-  newRow.splice(destIndex, 0, col)
-  return newRow
+ return produce(data, (draft) => {
+  for (const row of draft) {
+   let j = srcIndex
+   while (j < destIndex) swap(row, j, ++j)
+   while (j > destIndex) swap(row, j, --j)
+  }
  })
 }
 
@@ -28,18 +31,17 @@ export function deleteColumns(
  indexLo: number,
  indexHi: number,
 ): string[][] {
- return data.map((row) => {
-  const newRow = [...row]
-  newRow.splice(indexLo, indexHi - indexLo + 1)
-  return newRow
+ return produce(data, (draft) => {
+  for (const row of draft) {
+   row.splice(indexLo, indexHi - indexLo + 1)
+  }
  })
 }
 
 export function insertRowBefore(data: string[][], index: number): string[][] {
- const newData = [...data]
- const width = data[0]?.length || 0
- newData.splice(index, 0, Array(width).fill(''))
- return newData
+ return produce(data, (draft) => {
+  draft.splice(index, 0, Array(data[0]?.length || 0).fill(''))
+ })
 }
 
 export function moveRow(
@@ -48,18 +50,23 @@ export function moveRow(
  destIndex: number,
 ): string[][] {
  if (srcIndex === destIndex) return data
- const newData = [...data]
- const [row] = newData.splice(srcIndex, 1)
- newData.splice(destIndex, 0, row)
- return newData
+ return produce(data, (draft) => {
+  let i = srcIndex
+  while (i < destIndex) swap(draft, i, ++i)
+  while (i > destIndex) swap(draft, i, --i)
+ })
 }
 
-export const deleteRows = (
+export function deleteRows(
  data: string[][],
  indexLo: number,
  indexHi: number,
-): string[][] => {
- const newData = [...data]
- newData.splice(indexLo, indexHi - indexLo + 1)
- return newData
+): string[][] {
+ return produce(data, (draft) => {
+  draft.splice(indexLo, indexHi - indexLo + 1)
+ })
+}
+
+const swap = <T>(arr: T[], a: number, b: number) => {
+ ;[arr[a], arr[b]] = [arr[b], arr[a]]
 }

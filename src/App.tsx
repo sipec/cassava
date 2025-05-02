@@ -1,3 +1,4 @@
+import { produce } from 'immer'
 import { Plus } from 'lucide-react'
 import Papa from 'papaparse'
 import { useEffect, useRef, useState } from 'react'
@@ -9,8 +10,14 @@ import { getDisplayData, loadForumula } from './lib/formulas'
 import { THE_ORDER, parseCassava } from './lib/parser/cassava'
 import type { ColumnType } from './lib/parser/types'
 import {
- deleteColumns,
- deleteRows,
+ type Selection,
+ clearSelection,
+ deleteSelection,
+ isCellInSelection,
+ isSingular,
+ pasteSelection,
+} from './lib/selection'
+import {
  insertColumnBefore,
  insertRowBefore,
  moveColumn,
@@ -90,12 +97,12 @@ export default function App() {
    return
   }
 
-  setData((prevData) => {
-   const newData = structuredClone(prevData)
-   if (value && !newData[row]) newData[row] = []
-   if (value || newData[row]?.[col] != null) newData[row][col] = value
-   return newData
-  })
+  setData(
+   produce((draft) => {
+    draft[row] ??= []
+    draft[row][col] = value
+   }),
+  )
 
   // Update formula display after edit
   if (currentPath) {
@@ -149,15 +156,11 @@ export default function App() {
    case 'C':
     if ((e.metaKey || e.ctrlKey) && selection && !isSingular(selection)) {
      e.preventDefault()
-     const { rowLo, rowHi, colLo, colHi } = getBounds(selection)
-     const copy = data.slice(rowLo, rowHi + 1).map((row) => {
-      row.slice(colLo, colHi + 1)
-     })
 
-     navigator.clipboard.writeText(Papa.unparse(copy))
      if (e.key === 'X') {
-      setData((data) => deleteSelection({ selection, data }))
+      setData((data) => clearSelection({ selection, data }))
      }
+     // TODO: copy
     }
 
     break
@@ -215,7 +218,7 @@ export default function App() {
    case 'Backspace':
    case 'Clear':
     if (selection && mode === 'visual' && !(e.metaKey || e.ctrlKey)) {
-     setData((data) => deleteSelection({ selection, data }))
+     setData((data) => clearSelection({ selection, data }))
      if (isSingular(selection)) navigate(row, col - 1)
     }
     break
@@ -310,14 +313,18 @@ export default function App() {
          case 'Clear':
           if (selection) {
            setData((data) => {
-            const { rowLo, colLo, rowHi, colHi } = getBounds(selection)
-
-            if (rowLo < 0 && colLo < 0) return [[]]
-            if (colLo < 0) return deleteRows(data, rowLo, rowHi)
-            if (rowLo < 0) return deleteColumns(data, colLo, colHi)
+            const newData = deleteSelection({ selection, data })
+            if (newData !== data) {
+             setSelection(null)
+             return newData
+            }
+            if (mode !== 'edit') {
+             return clearSelection({ selection, data })
+            }
             return data
            })
           }
+
           break
         }
        }}
@@ -648,54 +655,4 @@ const letter = (col: number) => {
   num = Math.floor(num / 26) - 1
  }
  return letters
-}
-
-type Selection = {
- start: { row: number; col: number }
- end: { row: number; col: number }
-}
-
-const isSingular = (selection: Selection) => {
- return (
-  selection.start.row === selection.end.row &&
-  selection.start.col === selection.end.col
- )
-}
-
-const getBounds = (selection: Selection) => {
- const [rowLo, rowHi] = [selection.start.row, selection.end.row].sort()
- const [colLo, colHi] = [selection.start.col, selection.end.col].sort()
- return { rowLo, rowHi, colLo, colHi }
-}
-
-function isCellInSelection(row: number, col: number, sel: Selection): boolean {
- const { rowLo, rowHi, colLo, colHi } = getBounds(sel)
- return row >= rowLo && row <= rowHi && col >= colLo && col <= colHi
-}
-
-const deleteSelection = (props: { selection: Selection; data: string[][] }) => {
- const { selection, data } = props
- const { rowLo, rowHi, colLo, colHi } = getBounds(selection)
- const copy = structuredClone(data)
- for (let i = rowLo; i <= rowHi; i++) {
-  copy[i].splice(colLo, colHi - colLo + 1, ...Array(colHi - colLo + 1).fill(''))
- }
- return copy
-}
-
-const pasteSelection = (props: {
- row: number
- col: number
- data: string[][]
- paste: string[][]
-}) => {
- const { row, col, data, paste } = props
- const copy = structuredClone(data)
- for (let i = 0; i < paste.length && row + i < copy.length; i++) {
-  if (!copy[row + i]) copy[row + i] = []
-  for (let j = 0; j < paste[i].length; j++) {
-   copy[row + i][col + j] = paste[i][j]
-  }
- }
- return copy
 }
