@@ -5,15 +5,15 @@ A slick, modern CSV editor with spreadsheet features. Like Obsidian but for CSV 
 ## Features
 
 - 📊 [Typed columns](/src/lib/parser/README.md): Text, Numbers, Dates, Checkboxes, Select & Multi-select
-- 🔄 Functions (coming soon)
+- 🔄 Formulas like excel & google sheets - using [HyperFormula](https://hyperformula.dev/)
 - 💾 Autosave
 - ⌨️ Keyboard navigation
-- ✂️ Copy/paste (coming soon)
 - 🔒 100% local - your data never leaves your device
+- 🎯 Column/row reordering
 
 ### Roadmap
 
-- 🎯 Column/row reordering
+- ✂️ Copy/paste
 - 🔄 Undo/redo support
 - 📑 Multiple file tabs
 - 📥 Import from other formats
