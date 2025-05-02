@@ -7,10 +7,10 @@ const ids: { [path: string]: number } = {}
 const getId = (path: string) =>
  (ids[path] ??= instance.getSheetId(instance.addSheet(path)) as number)
 
-export const loadForumula = (path: string, data: string[][]) =>
- instance.setSheetContent(getId(path), data)
-
-export const getDisplayData = (path: string) =>
- instance
-  .getSheetValues(getId(path))
+export const setFormulaSheet = (path: string, data: string[][]) => {
+ const id = getId(path)
+ instance.setSheetContent(id, data)
+ return instance
+  .getSheetValues(id)
   .map((y) => y.map((x) => x?.toString() ?? ''))
+}

@@ -6,9 +6,9 @@ import { twMerge } from 'tailwind-merge'
 import { CellInput } from './components/CellInput'
 import { Empty } from './components/Empty'
 import { readFile, saveFile } from './lib/files'
-import { getDisplayData, loadForumula } from './lib/formulas'
+import { setFormulaSheet } from './lib/formulas'
 import { THE_ORDER, parseCassava } from './lib/parser/cassava'
-import type { ColumnType } from './lib/parser/types'
+import { parseColumnType } from './lib/parser/types'
 import {
  type Selection,
  clearSelection,
@@ -62,8 +62,7 @@ export default function App() {
     setFirstBodyRow(firstBodyRow)
 
     // Load into HyperFormula
-    loadForumula(path, data)
-    setDisplayData(getDisplayData(path))
+    setDisplayData(setFormulaSheet(path, data))
    },
    error: (error: unknown) => {
     console.error('Error parsing CSV:', error)
@@ -91,6 +90,12 @@ export default function App() {
   return () => clearTimeout(timeoutId)
  }, [data, currentPath, headers])
 
+ useEffect(() => {
+  if (mode !== 'edit' && currentPath) {
+   setDisplayData(setFormulaSheet(currentPath, data))
+  }
+ }, [mode, currentPath, data])
+
  function handleCellEdit(row: number, col: number, value: string) {
   if (row < 0 || col < 0 || Number.isNaN(row) || Number.isNaN(col)) {
    console.error('Invalid row or column:', row, col)
@@ -103,12 +108,6 @@ export default function App() {
     draft[row][col] = value
    }),
   )
-
-  // Update formula display after edit
-  if (currentPath) {
-   loadForumula(currentPath, data)
-   setDisplayData(getDisplayData(currentPath))
-  }
  }
 
  function handleCellKeyDown(
@@ -526,9 +525,14 @@ export default function App() {
              >
               <CellInput
                value={
-                selection?.end.row === i && selection?.end.col === j
-                 ? cell
-                 : String(displayData[i]?.[j] ?? '')
+                isCassava &&
+                parseColumnType(types?.[j]) === 'formula' &&
+                // not focused
+                (!selection ||
+                 selection.end.row !== i ||
+                 selection.end.col !== j)
+                 ? (displayData[i]?.[j]?.toString() ?? '')
+                 : cell
                }
                setValue={(value) => handleCellEdit(i, j, value)}
                nullDefault={nullDefaults?.[j]}

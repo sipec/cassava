@@ -5,6 +5,7 @@ export type ColumnType =
  | 'logical'
  | 'select'
  | 'multiselect'
+ | 'formula'
 
 export const parseColumnType = (type: string): ColumnType => {
  if (!type) return 'text'
@@ -17,6 +18,7 @@ export const parseColumnType = (type: string): ColumnType => {
   case 'logical':
   case 'select':
   case 'multiselect':
+  case 'formula':
    return baseType
   default:
    console.warn(`Unknown column type: ${type}, falling back to string`)
