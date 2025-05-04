@@ -21,7 +21,7 @@ export const parseColumnType = (type: string): ColumnType => {
   case 'formula':
    return baseType
   default:
-   console.warn(`Unknown column type: ${type}, falling back to string`)
+   console.warn(`Unknown column type: ${type}, falling back to text`)
    return 'text'
  }
 }

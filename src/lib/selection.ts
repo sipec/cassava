@@ -1,5 +1,4 @@
 import { produce } from 'immer'
-import { deleteColumns, deleteRows } from './table'
 
 export type Selection = {
  start: { row: number; col: number }
@@ -13,14 +12,19 @@ export const isSingular = (selection: Selection) => {
  )
 }
 
-const getBounds = (selection: Selection) => {
+export const getBounds = (selection: Selection) => {
  const [rowLo, rowHi] = [selection.start.row, selection.end.row].sort()
  const [colLo, colHi] = [selection.start.col, selection.end.col].sort()
  return { rowLo, rowHi, colLo, colHi }
 }
 
-export const isCellInSelection = (row: number, col: number, sel: Selection) => {
+export const isCellInSelection = (
+ row: number,
+ col: number,
+ sel: Selection | null,
+) => {
  return (
+  !!sel &&
   ((row >= sel.start.row && row <= sel.end.row) ||
    (row >= sel.end.row && row <= sel.start.row)) &&
   ((col >= sel.start.col && col <= sel.end.col) ||
@@ -30,21 +34,7 @@ export const isCellInSelection = (row: number, col: number, sel: Selection) => {
 
 export const getSelectionData = (data: string[][], selection: Selection) => {
  const { rowLo, rowHi, colLo, colHi } = getBounds(selection)
- return data.slice(rowLo, rowHi + 1).map((row) => 
-  row.slice(colLo, colHi + 1)
- )
-}
-
-export const deleteSelection = (props: {
- selection: Selection
- data: string[][]
-}) => {
- const { selection, data } = props
- const { rowLo, rowHi, colLo, colHi } = getBounds(selection)
- if (rowLo < 0 && colLo < 0) return [[]]
- if (colLo < 0) return deleteRows(data, rowLo, rowHi)
- if (rowLo < 0) return deleteColumns(data, colLo, colHi)
- return data
+ return data.slice(rowLo, rowHi + 1).map((row) => row.slice(colLo, colHi + 1))
 }
 
 export const clearSelection = (props: {

@@ -1,9 +1,9 @@
 0-cassava,name,birthday,age,notifications,color,height,Idk
-0-type,string,date:YYYY-MM-DD,formula:number,logical,select:red|green|blue,number,formula:number
+0-type,text,date:YYYY-MM-DD,formula:number,logical,select:red|green|blue,number,formula:number
 0-null-default,,,,false,red,4,=F+1
 0-default,,,YEARS(NOW()-{birthday}),,,,
 1,Adam,1999-12-14,YEARS(NOW()-{birthday}),true,red,4,=G+1
-2,Beu,1977-01-13,sdf,true,blue,3,=G1
-3,,,4,true,red,,=G1+1
-4,,,,,blue,4,=G1+1
-,,,,,,4,=G1+1
+,Beu,1977-01-13,sdf,,blue,3,=G1
+,,,E,,red,,=G1+1
+,,2025-05-09,Ff,true,blue,4,=G1+1
+,,,Dfsdf,,blue,4,=G1+1

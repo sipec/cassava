@@ -1,23 +1,25 @@
 import { produce } from 'immer'
 import { Plus } from 'lucide-react'
 import Papa from 'papaparse'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { twMerge } from 'tailwind-merge'
 import { CellInput } from './components/CellInput'
 import { Empty } from './components/Empty'
 import { readFile, saveFile } from './lib/files'
 import { setFormulaSheet } from './lib/formulas'
 import { THE_ORDER, parseCassava } from './lib/parser/cassava'
-import { parseColumnType } from './lib/parser/types'
+import { type ColumnType, parseColumnType } from './lib/parser/types'
 import {
  type Selection,
  clearSelection,
- deleteSelection,
+ getBounds,
  isCellInSelection,
  isSingular,
  pasteSelection,
 } from './lib/selection'
 import {
+ deleteColumns,
+ deleteRows,
  insertColumnBefore,
  insertRowBefore,
  moveColumn,
@@ -110,11 +112,30 @@ export default function App() {
   )
  }
 
- function handleCellKeyDown(
-  row: number,
-  col: number,
-  e: React.KeyboardEvent<HTMLTableCellElement>,
- ) {
+ function handleCellClick(e: React.MouseEvent) {
+  const { row, col } = getLocationOfInput(e.target as any)
+  if (row < 0 || col < 0) return
+
+  setSelection({
+   start: { row, col },
+   end: { row, col },
+  })
+
+  if (
+   selection &&
+   isSingular(selection) &&
+   row === selection.start.row &&
+   col === selection.start.col
+  ) {
+   setMode('edit')
+  } else {
+   setMode('visual')
+  }
+ }
+
+ function handleCellKeyDown(e: React.KeyboardEvent) {
+  const { row, col } = getLocationOfInput(e.target as any)
+
   const navigate = (
    newRow: number,
    newCol: number,
@@ -122,11 +143,7 @@ export default function App() {
   ) => {
    e.preventDefault()
 
-   if (newCol < 0) {
-    return navigate(newRow - 1, data[newRow - 1]?.length - 1)
-   }
-
-   if (newRow < 0) return
+   if (newRow < 0 || newCol < 0) return
 
    if (create) createCellIfMissing(newRow, newCol, create)
    else if (newRow > data.length - 1 || newCol > data[newRow].length - 1) return
@@ -214,11 +231,31 @@ export default function App() {
      navigate(row + 1, col, 'row')
     }
     break
+   case 'Escape':
+    e.preventDefault()
+    if (mode !== 'visual') setMode('visual')
+    else setSelection(null)
+    break
    case 'Backspace':
    case 'Clear':
-    if (selection && mode === 'visual' && !(e.metaKey || e.ctrlKey)) {
-     setData((data) => clearSelection({ selection, data }))
-     if (isSingular(selection)) navigate(row, col - 1)
+    if (selection) {
+     setData((data) => {
+      const { rowLo, rowHi, colLo, colHi } = getBounds(selection)
+      if (colLo < 0) {
+       setSelection(null)
+       return deleteRows(data, rowLo, rowHi)
+      }
+      if (rowLo < 0) {
+       setSelection(null)
+       return deleteColumns(data, colLo, colHi)
+      }
+
+      if (mode === 'visual' && !(e.metaKey || e.ctrlKey)) {
+       return clearSelection({ selection, data })
+      }
+
+      return data
+     })
     }
     break
   }
@@ -235,14 +272,6 @@ export default function App() {
   if (create === 'col' && data[newRow]?.[newCol] == null) {
    setData((data) => insertColumnBefore(data, newCol))
   }
- }
-
- const tableRef = useRef<HTMLTableSectionElement>(null)
-
- function getCellInputAt(row: number, col: number) {
-  return tableRef.current?.querySelector(
-   `[data-row="${row}"][data-col="${col}"] input`,
-  ) as HTMLInputElement | null
  }
 
  function selectColumn(col: number) {
@@ -301,32 +330,9 @@ export default function App() {
          setSelection(null)
         }
        }}
-       onKeyDown={(e) => {
-        switch (e.key) {
-         case 'Escape':
-          e.preventDefault()
-          if (mode !== 'visual') setMode('visual')
-          else setSelection(null)
-          break
-         case 'Backspace':
-         case 'Clear':
-          if (selection) {
-           setData((data) => {
-            const newData = deleteSelection({ selection, data })
-            if (newData !== data) {
-             setSelection(null)
-             return newData
-            }
-            if (mode !== 'edit') {
-             return clearSelection({ selection, data })
-            }
-            return data
-           })
-          }
-
-          break
-        }
-       }}
+       onInput={() => setMode('edit')}
+       onKeyDown={(e) => handleCellKeyDown(e)}
+       onClick={(e) => handleCellClick(e)}
       >
        {displayCols(
         Array.from({ length: (data[0]?.length || 0) + 1 }).map((_, j) => (
@@ -402,8 +408,9 @@ export default function App() {
               isCassava ? 'items-end justify-end' : 'justify-start',
               title && 'opacity-75',
              )}
-             aria-selected={!!selection && isCellInSelection(-1, j, selection)}
+             aria-selected={isCellInSelection(-1, j, selection)}
              onClick={(e) => {
+              e.stopPropagation()
               e.currentTarget.focus()
               selectColumn(j)
              }}
@@ -417,7 +424,7 @@ export default function App() {
          )}
         </tr>
        </thead>
-       <tbody ref={tableRef} className="contents">
+       <tbody className="contents">
         {displayRows(
          data.map((row, i) => (
           <tr key={i} className="group/row contents">
@@ -474,10 +481,11 @@ export default function App() {
              <HoverButton
               className="group-hover/row:opacity-100"
               onClick={(e) => {
+               e.stopPropagation()
                e.currentTarget.focus()
                selectRow(i)
               }}
-              aria-selected={!!selection && isCellInSelection(i, -1, selection)}
+              aria-selected={isCellInSelection(i, -1, selection)}
              >
               {Math.max(0, i - firstBodyRow + 1)}
              </HoverButton>
@@ -500,33 +508,13 @@ export default function App() {
               data-row={i}
               data-col={j}
               role="gridcell"
-              aria-selected={!!selection && isCellInSelection(i, j, selection)}
+              aria-selected={isCellInSelection(i, j, selection)}
               style={{ gridRowStart: i + 2, gridColumnStart: j + 2 }}
-              onKeyDown={(e) => handleCellKeyDown(i, j, e)}
-              onInput={() => setMode('edit')}
-              onClick={(e) => {
-               if (
-                !e.shiftKey &&
-                !e.ctrlKey &&
-                selection &&
-                selection.start.row === i &&
-                selection.start.col === j
-               ) {
-                setMode('edit')
-               } else {
-                setMode('visual')
-               }
-
-               setSelection({
-                start: { row: i, col: j },
-                end: { row: i, col: j },
-               })
-              }}
              >
               <CellInput
                value={
                 isCassava &&
-                parseColumnType(types?.[j]) === 'formula' &&
+                parseColumnType(types?.[j] ?? '') === 'formula' &&
                 // not focused
                 (!selection ||
                  selection.end.row !== i ||
@@ -582,7 +570,10 @@ const ColGridLine = (props: {
   >
    <button
     type="button"
-    onClick={onClickAdd}
+    onClick={(e) => {
+     e.stopPropagation()
+     onClickAdd()
+    }}
     className="-translate-x-1/2 absolute top-0 left-0 cursor-pointer bg-amber-500/50 p-px text-amber-200 opacity-0 transition-opacity hover:opacity-100"
    >
     <Plus size={24} />
@@ -659,4 +650,24 @@ const letter = (col: number) => {
   num = Math.floor(num / 26) - 1
  }
  return letters
+}
+
+function getCellInputAt(row: number, col: number) {
+ return document.querySelector(
+  `[data-row="${row}"][data-col="${col}"] input`,
+ ) as HTMLInputElement | null
+}
+
+function getLocationOfInput(input: HTMLElement) {
+ const cell = input.closest('[data-row][data-col]')
+ if (!cell) return { row: -1, col: -1 }
+
+ const r = cell.getAttribute('data-row')!
+ const c = cell.getAttribute('data-col')!
+ let row = Number.parseInt(r, 10)
+ let col = Number.parseInt(c, 10)
+ row = Number.isNaN(row) ? -1 : row
+ col = Number.isNaN(col) ? -1 : col
+
+ return { row, col }
 }
