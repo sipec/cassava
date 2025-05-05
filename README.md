@@ -10,10 +10,10 @@ A slick, modern CSV editor with spreadsheet features. Like Obsidian but for CSV 
 - ⌨️ Keyboard navigation
 - 🔒 100% local - your data never leaves your device
 - 🎯 Column/row reordering
+- ✂️ Copy/paste
 
 ### Roadmap
 
-- ✂️ Copy/paste
 - 🔄 Undo/redo support
 - 📑 Multiple file tabs
 - 📥 Import from other formats

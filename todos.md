@@ -1,7 +1,3 @@
-# Project TODOs
-
-- copy paste code is there but not working. need to hook into tauri.
-
 ## MVP Features
 
 - [x] File drag & drop upload
@@ -31,7 +27,7 @@
 - [x] Keyboard shortcuts
   - [ ] Customizable
 - [-] Selections
-- [ ] Copy paste
+- [x] Copy paste
 - [ ] Undo/redo
 - [ ] Multiple file tabs
 - [ ] Put filename in title

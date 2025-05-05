@@ -1,7 +1,9 @@
+import { listen } from '@tauri-apps/api/event'
+import { readText, writeText } from '@tauri-apps/plugin-clipboard-manager'
 import { produce } from 'immer'
 import { Plus } from 'lucide-react'
 import Papa from 'papaparse'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { twMerge } from 'tailwind-merge'
 import { CellInput } from './components/CellInput'
 import { Empty } from './components/Empty'
@@ -13,6 +15,7 @@ import {
  type Selection,
  clearSelection,
  getBounds,
+ getSelectionData,
  isCellInSelection,
  isSingular,
  pasteSelection,
@@ -168,36 +171,6 @@ export default function App() {
   }
 
   switch (e.key) {
-   case 'X':
-   case 'C':
-    if ((e.metaKey || e.ctrlKey) && selection && !isSingular(selection)) {
-     e.preventDefault()
-
-     if (e.key === 'X') {
-      setData((data) => clearSelection({ selection, data }))
-     }
-     // TODO: copy
-    }
-
-    break
-
-   case 'V':
-    if (e.metaKey || e.ctrlKey) {
-     ;(async () => {
-      const text = await navigator.clipboard.readText()
-      const paste = Papa.parse<string[]>(text, {
-       header: false,
-       skipEmptyLines: true,
-      }).data
-      if (paste.length === 0) return
-
-      e.preventDefault()
-      const { row, col } = selection?.start || { row: 0, col: 0 }
-      setData((prevData) => pasteSelection({ row, col, data: prevData, paste }))
-     })()
-    }
-    break
-
    case 'Home':
     if (e.metaKey) navigate(0, col)
     else navigate(0, 0)
@@ -289,6 +262,59 @@ export default function App() {
   })
   setMode('visual')
  }
+
+ // mirror this state in a ref so that the listen handlers use the latest value
+ const latestState = useRef<{
+  selection: Selection | null
+  data: string[][]
+  mode: Mode
+ }>({ selection, data, mode })
+
+ useEffect(() => {
+  latestState.current = { selection, data, mode }
+ }, [selection, data, mode])
+
+ const handleCopy = () => {
+  const { selection, data, mode } = latestState.current
+  if (!selection || mode === 'edit') {
+   // default action: copy selected text as normal
+   writeText(window.getSelection()?.toString() ?? '')
+  } else {
+   const text = Papa.unparse(getSelectionData(data, selection))
+   writeText(text)
+  }
+ }
+
+ const handlePaste = async () => {
+  const { selection } = latestState.current
+  const text = await readText()
+  const paste = Papa.parse<string[]>(text, {
+   header: false,
+   skipEmptyLines: true,
+  }).data
+  if (paste.length === 0) return
+
+  const { row, col } = selection?.start || { row: 0, col: 0 }
+  setData((prevData) => pasteSelection({ row, col, data: prevData, paste }))
+ }
+
+ useEffect(() => {
+  let unlisten = () => {}
+
+  Promise.all([
+   listen('copy', () => handleCopy()),
+   listen('cut', () => {
+    const { selection } = latestState.current
+    if (selection) setData((data) => clearSelection({ selection, data }))
+    handleCopy()
+   }),
+   listen('paste', () => handlePaste()),
+  ]).then((u) => {
+   unlisten = () => u.forEach((f) => f())
+  })
+
+  return unlisten
+ }, [])
 
  return (
   <div
